@@ -7,11 +7,11 @@ import streamlit as st
 from pathlib import Path
 import sys
 
-# モジュールインポートパスを設定（絶対パスを使用）
-project_root = Path(__file__).resolve().parents[2]  # 2階層上
-sys.path.insert(0, str(project_root))
+# モジュールインポートパスを設定
+app_dir = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(app_dir))
 
-from app.lib import queries, charts
+from lib import queries, charts
 
 st.set_page_config(
     page_title="馬詳細 - 競馬データベース",

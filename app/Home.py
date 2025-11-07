@@ -7,6 +7,8 @@ import streamlit as st
 import db
 import queries
 import charts
+import test_data
+
 # ページ設定
 st.set_page_config(
     page_title="競馬データベース",
@@ -51,12 +53,70 @@ if not db.verify_schema():
 st.sidebar.title("🐴 競馬データベース")
 st.sidebar.markdown("---")
 
+# 管理者パネル
+st.sidebar.subheader("⚙️ 管理者パネル")
+
+if st.sidebar.button("📥 テストデータを投入"):
+    with st.sidebar.status("処理中...", expanded=True) as status:
+        st.write("テストデータを生成中...")
+        races = test_data.generate_test_races()
+        horses = test_data.generate_test_horses()
+        jockeys = test_data.generate_test_jockeys()
+        trainers = test_data.generate_test_trainers()
+        entries = test_data.generate_test_entries(races, horses, jockeys, trainers)
+
+        st.write(f"✅ レース: {len(races)}件")
+        st.write(f"✅ 馬: {len(horses)}件")
+        st.write(f"✅ 騎手: {len(jockeys)}件")
+        st.write(f"✅ 調教師: {len(trainers)}件")
+        st.write(f"✅ 出走: {len(entries)}件")
+
+        # ETL処理
+        try:
+            from etl import upsert_master, upsert_race, upsert_entry, apply_alias
+            from metrics import build_horse_metrics
+            import sys
+            from pathlib import Path
+
+            # パス設定
+            etl_path = Path(__file__).parent.parent / "etl"
+            metrics_path = Path(__file__).parent.parent / "metrics"
+            sys.path.insert(0, str(Path(__file__).parent.parent))
+
+            st.write("マスタデータを登録...")
+            upsert_master.MasterDataUpsert().upsert_horses(horses)
+            upsert_master.MasterDataUpsert().upsert_jockeys(jockeys)
+            upsert_master.MasterDataUpsert().upsert_trainers(trainers)
+
+            st.write("レース情報を登録...")
+            upsert_race.RaceUpsert().upsert_races(races)
+
+            st.write("出走情報を登録...")
+            upsert_entry.EntryUpsert().upsert_entries(entries)
+
+            st.write("別名補正を適用...")
+            apply_alias.AliasApplier().apply_horse_aliases()
+
+            st.write("指標を計算...")
+            build_horse_metrics.build_all_horse_metrics(incremental=False)
+
+            status.update(label="✅ 完了!", state="complete")
+            st.success("テストデータの投入が完了しました！ページをリロードしてください。")
+
+        except Exception as e:
+            status.update(label="❌ エラー", state="error")
+            st.error(f"エラーが発生しました: {e}")
+            import traceback
+            st.code(traceback.format_exc())
+
+st.sidebar.markdown("---")
+
 # 開催日選択
 all_dates = queries.get_all_race_dates()
 
 if not all_dates:
     st.warning("📊 データがまだ登録されていません")
-    st.info("GitHub Actions またはローカルで初回データ取得を実行してください")
+    st.info("☝️ サイドバーの「テストデータを投入」をクリックしてください")
     st.stop()
 
 selected_date = st.sidebar.selectbox(

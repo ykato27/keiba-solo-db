@@ -10,8 +10,8 @@ from typing import List, Dict, Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "keiba.db"
-SCHEMA_PATH = Path(__file__).parent.parent.parent / "sql" / "schema.sql"
+DB_PATH = Path(__file__).parent.parent / "data" / "keiba.db"
+SCHEMA_PATH = Path(__file__).parent.parent / "sql" / "schema.sql"
 
 
 def get_connection(read_only: bool = False) -> sqlite3.Connection:

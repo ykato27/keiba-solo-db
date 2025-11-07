@@ -8,7 +8,7 @@ import sqlite3
 from typing import List, Dict, Any
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "keiba.db"
+DB_PATH = Path(__file__).parent.parent / "data" / "keiba.db"
 
 
 @st.cache_data(ttl=3600)  # 1時間キャッシュ

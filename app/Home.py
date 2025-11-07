@@ -5,6 +5,7 @@ Streamlit アプリケーション - ホームページ
 
 import streamlit as st
 import sys
+import time
 from pathlib import Path
 
 # パス設定（早い段階で設定）
@@ -16,6 +17,7 @@ import db
 import queries
 import charts
 import test_data
+import progress_utils
 
 # ページ設定
 st.set_page_config(
@@ -87,26 +89,49 @@ if st.sidebar.button("📥 本番データを投入", use_container_width=True):
             from etl import upsert_master, upsert_race, upsert_entry, apply_alias
             from metrics import build_horse_metrics
 
+            start_time = time.time()
+
+            # マスタデータを登録
             st.write("🔄 マスタデータを登録...")
+            step_start = time.time()
             upsert_master.MasterDataUpsert().upsert_horses(horses)
             upsert_master.MasterDataUpsert().upsert_jockeys(jockeys)
             upsert_master.MasterDataUpsert().upsert_trainers(trainers)
+            step_time = time.time() - step_start
+            st.caption(f"✅ 完了: {progress_utils.format_duration(step_time)}")
 
+            # レース情報を登録
             st.write("🔄 レース情報を登録...")
+            step_start = time.time()
             upsert_race.RaceUpsert().upsert_races(races)
+            step_time = time.time() - step_start
+            st.caption(f"✅ 完了: {progress_utils.format_duration(step_time)}")
 
+            # 出走情報を登録
             st.write("🔄 出走情報を登録...")
+            step_start = time.time()
             upsert_entry.EntryUpsert().upsert_entries(entries)
+            step_time = time.time() - step_start
+            st.caption(f"✅ 完了: {progress_utils.format_duration(step_time)}")
 
+            # 別名補正を適用
             st.write("🔄 別名補正を適用...")
+            step_start = time.time()
             apply_alias.AliasApplier().apply_horse_aliases()
+            step_time = time.time() - step_start
+            st.caption(f"✅ 完了: {progress_utils.format_duration(step_time)}")
 
+            # 指標を計算
             st.write("🔄 指標を計算（この処理が最も時間がかかります）...")
+            metric_start = time.time()
             build_horse_metrics.build_all_horse_metrics(incremental=False)
+            metric_time = time.time() - metric_start
+            st.caption(f"✅ 完了: {progress_utils.format_duration(metric_time)}")
 
+            total_time = time.time() - start_time
             status.update(label="✅ 完了!", state="complete")
-            st.success("✨ 本番データの投入が完了しました！\n\nページを下にスクロールしてデータを閲覧できます。")
-            
+            st.success(f"✨ 本番データの投入が完了しました！\n\n総処理時間: {progress_utils.format_duration(total_time)}\n\nページを下にスクロールしてデータを閲覧できます。")
+
             # キャッシュをクリア
             st.cache_data.clear()
 

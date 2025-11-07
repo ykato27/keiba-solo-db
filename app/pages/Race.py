@@ -82,87 +82,92 @@ st.markdown("---")
 st.subheader("🔍 馬詳細")
 
 # 馬を選択
-selected_horse_name = st.selectbox(
-    "馬を選択して詳細を表示",
-    options=[e["horse_name"] for e in entries if e["horse_name"]],
-)
+horse_options = [e["horse_name"] for e in entries if e["horse_name"]]
 
-if selected_horse_name:
-    # 選択された馬の情報を取得
-    selected_entry = next((e for e in entries if e["horse_name"] == selected_horse_name), None)
+if not horse_options:
+    st.warning("出走馬の詳細情報がありません")
+else:
+    selected_horse_name = st.selectbox(
+        "馬を選択して詳細を表示",
+        options=horse_options,
+    )
 
-    if selected_entry and selected_entry["horse_id"]:
-        horse_id = selected_entry["horse_id"]
+    if selected_horse_name:
+        # 選択された馬の情報を取得
+        selected_entry = next((e for e in entries if e["horse_name"] == selected_horse_name), None)
 
-        # 馬の詳細情報を取得
-        horse_details = queries.get_horse_details(horse_id)
+        if selected_entry and selected_entry["horse_id"]:
+            horse_id = selected_entry["horse_id"]
 
-        if horse_details:
-            # メトリクス表示
-            col1, col2, col3, col4, col5 = st.columns(5)
+            # 馬の詳細情報を取得
+            horse_details = queries.get_horse_details(horse_id)
 
-            metrics = charts.create_horse_metrics_display(horse_details)
+            if horse_details:
+                # メトリクス表示
+                col1, col2, col3, col4, col5 = st.columns(5)
 
-            with col1:
-                st.metric("出走数", metrics["出走数"])
+                metrics = charts.create_horse_metrics_display(horse_details)
 
-            with col2:
-                st.metric("勝率", metrics["勝率"])
+                with col1:
+                    st.metric("出走数", metrics["出走数"])
 
-            with col3:
-                st.metric("連対率", metrics["連対率"])
+                with col2:
+                    st.metric("勝率", metrics["勝率"])
 
-            with col4:
-                st.metric("複勝率", metrics["複勝率"])
+                with col3:
+                    st.metric("連対率", metrics["連対率"])
 
-            with col5:
-                st.metric("近走指数", metrics["近走指数"])
+                with col4:
+                    st.metric("複勝率", metrics["複勝率"])
 
-            st.markdown("---")
-
-            # 過去成績
-            st.subheader("📊 過去成績")
-
-            history = queries.get_horse_race_history(horse_id, limit=20)
-
-            if history:
-                history_df = charts.create_horse_history_table(history)
-                st.dataframe(history_df, use_container_width=True, hide_index=True)
+                with col5:
+                    st.metric("近走指数", metrics["近走指数"])
 
                 st.markdown("---")
 
-                # グラフ表示
-                col1, col2 = st.columns(2)
+                # 過去成績
+                st.subheader("📊 過去成績")
 
-                with col1:
-                    fig = charts.create_recent_score_chart(history)
-                    st.plotly_chart(fig, use_container_width=True)
+                history = queries.get_horse_race_history(horse_id, limit=20)
 
-                with col2:
-                    fig = charts.create_distance_preference_chart(
-                        horse_details.get("distance_pref", "{}")
+                if history:
+                    history_df = charts.create_horse_history_table(history)
+                    st.dataframe(history_df, use_container_width=True, hide_index=True)
+
+                    st.markdown("---")
+
+                    # グラフ表示
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        fig = charts.create_recent_score_chart(history)
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    with col2:
+                        fig = charts.create_distance_preference_chart(
+                            horse_details.get("distance_pref", "{}")
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    # 馬場別成績
+                    fig = charts.create_surface_preference_chart(
+                        horse_details.get("surface_pref", "{}")
                     )
                     st.plotly_chart(fig, use_container_width=True)
 
-                # 馬場別成績
-                fig = charts.create_surface_preference_chart(
-                    horse_details.get("surface_pref", "{}")
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                    # 馬詳細へのリンク
+                    st.markdown("---")
+                    if st.button(f"🔗 {selected_horse_name} の詳細ページへ", key=f"horse_detail_{horse_id}"):
+                        st.session_state.selected_horse_id = horse_id
+                        st.switch_page("pages/Horse.py")
 
-                # 馬詳細へのリンク
-                st.markdown("---")
-                if st.button(f"🔗 {selected_horse_name} の詳細ページへ", key=f"horse_detail_{horse_id}"):
-                    st.session_state.selected_horse_id = horse_id
-                    st.switch_page("pages/Horse.py")
+                else:
+                    st.info("過去成績がまだ登録されていません")
 
             else:
-                st.info("過去成績がまだ登録されていません")
-
+                st.error("馬情報の取得に失敗しました")
         else:
-            st.error("馬情報の取得に失敗しました")
-    else:
-        st.warning("馬IDが見つかりません")
+            st.warning("馬IDが見つかりません")
 
 st.markdown("---")
 

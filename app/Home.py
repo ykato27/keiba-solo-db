@@ -64,45 +64,51 @@ st.sidebar.markdown("---")
 # 管理者パネル
 st.sidebar.subheader("⚙️ 管理者パネル")
 
-if st.sidebar.button("📥 テストデータを投入"):
+st.sidebar.write("**本番データを投入**")
+years = st.sidebar.slider("対象年数", 1, 5, 3, help="投入する過去年数（多いほど時間がかかります）")
+
+if st.sidebar.button("📥 本番データを投入", use_container_width=True):
     with st.sidebar.status("処理中...", expanded=True) as status:
-        st.write("テストデータを生成中...")
-        races = test_data.generate_test_races()
-        horses = test_data.generate_test_horses()
-        jockeys = test_data.generate_test_jockeys()
-        trainers = test_data.generate_test_trainers()
+        st.write(f"📊 {years}年分のデータを生成中...")
+        races = test_data.generate_test_races(years=years)
+        horses = test_data.generate_test_horses(count=150 + years*30)
+        jockeys = test_data.generate_test_jockeys(count=40 + years*10)
+        trainers = test_data.generate_test_trainers(count=40 + years*10)
         entries = test_data.generate_test_entries(races, horses, jockeys, trainers)
 
-        st.write(f"✅ レース: {len(races)}件")
-        st.write(f"✅ 馬: {len(horses)}件")
-        st.write(f"✅ 騎手: {len(jockeys)}件")
-        st.write(f"✅ 調教師: {len(trainers)}件")
-        st.write(f"✅ 出走: {len(entries)}件")
+        st.write(f"✅ レース: {len(races):,}件")
+        st.write(f"✅ 馬: {len(horses):,}件")
+        st.write(f"✅ 騎手: {len(jockeys):,}件")
+        st.write(f"✅ 調教師: {len(trainers):,}件")
+        st.write(f"✅ 出走: {len(entries):,}件")
 
         # ETL処理
         try:
             from etl import upsert_master, upsert_race, upsert_entry, apply_alias
             from metrics import build_horse_metrics
 
-            st.write("マスタデータを登録...")
+            st.write("🔄 マスタデータを登録...")
             upsert_master.MasterDataUpsert().upsert_horses(horses)
             upsert_master.MasterDataUpsert().upsert_jockeys(jockeys)
             upsert_master.MasterDataUpsert().upsert_trainers(trainers)
 
-            st.write("レース情報を登録...")
+            st.write("🔄 レース情報を登録...")
             upsert_race.RaceUpsert().upsert_races(races)
 
-            st.write("出走情報を登録...")
+            st.write("🔄 出走情報を登録...")
             upsert_entry.EntryUpsert().upsert_entries(entries)
 
-            st.write("別名補正を適用...")
+            st.write("🔄 別名補正を適用...")
             apply_alias.AliasApplier().apply_horse_aliases()
 
-            st.write("指標を計算...")
+            st.write("🔄 指標を計算（この処理が最も時間がかかります）...")
             build_horse_metrics.build_all_horse_metrics(incremental=False)
 
             status.update(label="✅ 完了!", state="complete")
-            st.success("テストデータの投入が完了しました！ページをリロードしてください。")
+            st.success("✨ 本番データの投入が完了しました！\n\nページを下にスクロールしてデータを閲覧できます。")
+            
+            # キャッシュをクリア
+            st.cache_data.clear()
 
         except Exception as e:
             status.update(label="❌ エラー", state="error")
@@ -117,7 +123,7 @@ all_dates = queries.get_all_race_dates()
 
 if not all_dates:
     st.warning("📊 データがまだ登録されていません")
-    st.info("☝️ サイドバーの「テストデータを投入」をクリックしてください")
+    st.info("☝️ サイドバーで年数を選択して、「本番データを投入」をクリックしてください")
     st.stop()
 
 selected_date = st.sidebar.selectbox(
@@ -147,8 +153,7 @@ st.sidebar.metric("開催日数", total_races)
 
 st.sidebar.markdown("---")
 st.sidebar.info(
-    "💡 レース行をクリックして詳細を表示するか、"
-    "馬名をクリックして馬詳細ページに移動します"
+    "💡 「詳細」ボタンでレース詳細ページに移動します"
 )
 
 # ========================
@@ -188,7 +193,7 @@ else:
                 if race.get('going'):
                     st.caption(f"馬場: {race['going']}")
                 if race.get('grade'):
-                    st.caption(f"グレード: {race['grade']}")
+                    st.caption(f"クラス: {race['grade']}")
 
             with col4:
                 if st.button("詳細", key=f"race_{race_id}"):
@@ -217,9 +222,6 @@ else:
                         use_container_width=True,
                         hide_index=True,
                     )
-
-                    # 馬名クリックで詳細ページへ
-                    st.caption("馬名をクリックして詳細を確認")
 
 # ========================
 # フッター

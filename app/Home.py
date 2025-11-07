@@ -7,9 +7,9 @@ import streamlit as st
 from pathlib import Path
 import sys
 
-# モジュールインポートパスを設定
-app_dir = Path(__file__).parent
-sys.path.insert(0, str(app_dir.parent))
+# モジュールインポートパスを設定（絶対パスを使用）
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root))
 
 from app.lib import db, queries, charts
 

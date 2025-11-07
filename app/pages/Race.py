@@ -4,16 +4,15 @@ Streamlit アプリケーション - レース詳細ページ
 """
 
 import streamlit as st
-from pathlib import Path
 import sys
+from pathlib import Path
 
-# app ディレクトリを sys.path に追加（パッケージインポート対応）
-# pages/Race.py -> pages/ -> app/
-app_dir = Path(__file__).parent.parent
-if str(app_dir) not in sys.path:
-    sys.path.insert(0, str(app_dir))
+# 親ディレクトリを sys.path に追加
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lib import db, queries, charts
+import db
+import queries
+import charts
 
 st.set_page_config(
     page_title="レース詳細 - 競馬データベース",

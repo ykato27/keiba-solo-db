@@ -4,16 +4,9 @@ Streamlit アプリケーション - ホームページ
 """
 
 import streamlit as st
-from pathlib import Path
-import sys
-
-# app ディレクトリを sys.path に追加（パッケージインポート対応）
-app_dir = Path(__file__).parent
-if str(app_dir) not in sys.path:
-    sys.path.insert(0, str(app_dir))
-
-from lib import db, queries, charts
-
+import db
+import queries
+import charts
 # ページ設定
 st.set_page_config(
     page_title="競馬データベース",

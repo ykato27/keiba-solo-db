@@ -4,6 +4,14 @@ Streamlit アプリケーション - ホームページ
 """
 
 import streamlit as st
+import sys
+from pathlib import Path
+
+# パス設定（早い段階で設定）
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 import db
 import queries
 import charts
@@ -75,13 +83,6 @@ if st.sidebar.button("📥 テストデータを投入"):
         try:
             from etl import upsert_master, upsert_race, upsert_entry, apply_alias
             from metrics import build_horse_metrics
-            import sys
-            from pathlib import Path
-
-            # パス設定
-            etl_path = Path(__file__).parent.parent / "etl"
-            metrics_path = Path(__file__).parent.parent / "metrics"
-            sys.path.insert(0, str(Path(__file__).parent.parent))
 
             st.write("マスタデータを登録...")
             upsert_master.MasterDataUpsert().upsert_horses(horses)

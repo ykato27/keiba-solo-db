@@ -7,13 +7,13 @@ import streamlit as st
 from pathlib import Path
 import sys
 
-# lib ディレクトリを sys.path に追加（相対インポート対応）
-# pages/Horse.py -> pages/ -> app/ -> lib/
-lib_path = Path(__file__).parent.parent / "lib"
-if str(lib_path) not in sys.path:
-    sys.path.insert(0, str(lib_path))
+# app ディレクトリを sys.path に追加（パッケージインポート対応）
+# pages/Horse.py -> pages/ -> app/
+app_dir = Path(__file__).parent.parent
+if str(app_dir) not in sys.path:
+    sys.path.insert(0, str(app_dir))
 
-import queries, charts
+from lib import queries, charts
 
 st.set_page_config(
     page_title="馬詳細 - 競馬データベース",

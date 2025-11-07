@@ -1,0 +1,55 @@
+name: weekly_results
+
+on:
+  schedule:
+    # 日曜 23:30 JST (= 日曜 14:30 UTC) と月曜 6:00 JST (= 日曜 21:00 UTC)
+    - cron: '30 14 * * 0'
+    - cron: '0 21 * * 0'
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: キャッシュを復元
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: 依存関係をインストール
+        run: pip install -r requirements.txt
+
+      - name: 最新の結果を取得
+        run: python -m scraper.fetch_result --latest
+
+      - name: 出走情報を更新
+        run: python -m etl.upsert_entry
+
+      - name: 指標を計算（インクリメンタル）
+        run: python -m metrics.build_horse_metrics --incremental
+
+      - name: データベースを最適化
+        run: sqlite3 data/keiba.db 'VACUUM;'
+
+      - name: Gitを設定
+        run: |
+          git config user.name "actions-bot"
+          git config user.email "actions@users.noreply.github.com"
+
+      - name: 変更をコミット
+        run: |
+          git add -A
+          git commit -m "weekly results + metrics" || true
+
+      - name: プッシュ
+        run: git push

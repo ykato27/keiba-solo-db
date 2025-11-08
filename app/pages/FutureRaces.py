@@ -94,6 +94,11 @@ if st.button("📥 将来レース情報を取得", type="primary", use_containe
 
             if not upcoming_races:
                 st.error("❌ レース情報が取得できませんでした")
+                st.info("⚠️ 考えられる原因:")
+                st.info("  - JRA公式サイトのHTML構造が変更された可能性")
+                st.info("  - ネットワーク接続エラー")
+                st.info("  - スクレイピング対象期間にレースがない")
+                st.info("💡 詳細はサーバーログを確認してください")
                 st.stop()
 
             st.write(f"✅ {len(upcoming_races)} 件のレース情報を取得しました")

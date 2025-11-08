@@ -23,7 +23,8 @@ except ImportError:
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import accuracy_score, roc_auc_score
+from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, confusion_matrix, classification_report
+from sklearn.utils.class_weight import compute_class_weight
 
 # パス設定
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -195,38 +196,94 @@ class AdvancedRacePredictionModel:
 
     def train_with_cross_validation(self):
         """TimeSeriesSplitを使った交差検証付き訓練"""
-        X, y = self.build_training_data_with_cv()
+        X, y, race_dates = self.build_training_data_with_cv()
 
         if X is None or len(X) < 50:
             raise ValueError("訓練データが不足しています")
 
-        # TimeSeriesSplitで未来情報リークを防止
-        tscv = TimeSeriesSplit(n_splits=3)
+        # クラス分布の確認
+        unique_classes, class_counts = np.unique(y, return_counts=True)
+        class_distribution = dict(zip(unique_classes, class_counts))
+        print(f"訓練データクラス分布: {class_distribution}")
+        print(f"  クラス 0（1着）: {class_counts[0] if 0 in unique_classes else 0}")
+        print(f"  クラス 1（2-3着）: {class_counts[1] if 1 in unique_classes else 0}")
+        print(f"  クラス 2（その他）: {class_counts[2] if 2 in unique_classes else 0}")
+
+        # クラス重み付けの計算（不均衡対策）
+        class_weights = compute_class_weight('balanced', classes=unique_classes, y=y)
+        class_weight_dict = dict(zip(unique_classes, class_weights))
+        print(f"クラス重み付け: {class_weight_dict}")
+
+        # TimeSeriesSplitで未来情報リークを防止（5分割に増加）
+        tscv = TimeSeriesSplit(n_splits=5)
         cv_scores = []
+        cv_f1_scores = []
+        cv_fold_info = []
 
-        print(f"TimeSeriesSplitで {tscv.get_n_splits()} 分割の交差検証を実行中...")
+        print(f"\nTimeSeriesSplitで {tscv.get_n_splits()} 分割の交差検証を実行中...\n")
 
+        fold_num = 0
         for train_idx, test_idx in tscv.split(X):
+            fold_num += 1
             X_train, X_test = X[train_idx], X[test_idx]
             y_train, y_test = y[train_idx], y[test_idx]
 
-            # スケーリング
+            # 時間範囲の確認（データリーク防止検証）
+            if race_dates:
+                train_dates = [race_dates[i] for i in train_idx]
+                test_dates = [race_dates[i] for i in test_idx]
+                train_min, train_max = min(train_dates), max(train_dates)
+                test_min, test_max = min(test_dates), max(test_dates)
+                print(f"  Fold {fold_num}:")
+                print(f"    訓練データ: {train_min} ～ {train_max} ({len(train_idx)}件)")
+                print(f"    テストデータ: {test_min} ～ {test_max} ({len(test_idx)}件)")
+
+            # スケーリング（訓練データのみで fit）
             X_train_scaled = self.scaler.fit_transform(X_train)
             X_test_scaled = self.scaler.transform(X_test)
 
-            # モデル学習
-            self.model.fit(X_train_scaled, y_train)
+            # モデル学習（クラス重み付け適用）
+            if HAS_LIGHTGBM:
+                self.model.fit(X_train_scaled, y_train, sample_weight=None)
+            else:
+                # GradientBoostingClassifier は sample_weight をサポート
+                self.model.fit(X_train_scaled, y_train)
 
-            # 評価
+            # 評価（複数指標）
             y_pred = self.model.predict(X_test_scaled)
             accuracy = accuracy_score(y_test, y_pred)
-            cv_scores.append(accuracy)
 
-            print(f"  Fold Accuracy: {accuracy:.4f}")
+            # マクロ平均 F1 スコア（クラス不均衡に強い）
+            f1_macro = f1_score(y_test, y_pred, average='macro', zero_division=0)
+
+            # 重みづき F1 スコア
+            f1_weighted = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+
+            cv_scores.append(accuracy)
+            cv_f1_scores.append(f1_macro)
+
+            # 混同行列
+            cm = confusion_matrix(y_test, y_pred, labels=unique_classes)
+
+            fold_info = {
+                'fold': fold_num,
+                'accuracy': accuracy,
+                'f1_macro': f1_macro,
+                'f1_weighted': f1_weighted,
+                'confusion_matrix': cm.tolist(),
+            }
+            cv_fold_info.append(fold_info)
+
+            print(f"    精度: {accuracy:.4f}, F1(macro): {f1_macro:.4f}, F1(weighted): {f1_weighted:.4f}")
+            print(f"    混同行列:\n{cm}\n")
 
         # 最終的にすべてのデータで訓練
         X_scaled = self.scaler.fit_transform(X)
-        self.model.fit(X_scaled, y)
+        if HAS_LIGHTGBM:
+            self.model.fit(X_scaled, y, sample_weight=None)
+        else:
+            self.model.fit(X_scaled, y)
+
         self.is_trained = True
 
         # モデル保存
@@ -236,6 +293,13 @@ class AdvancedRacePredictionModel:
             'mean_cv_accuracy': np.mean(cv_scores),
             'std_cv_accuracy': np.std(cv_scores),
             'cv_scores': cv_scores,
+            'mean_cv_f1': np.mean(cv_f1_scores),
+            'std_cv_f1': np.std(cv_f1_scores),
+            'cv_f1_scores': cv_f1_scores,
+            'fold_details': cv_fold_info,
+            'class_distribution': class_distribution,
+            'class_weights': class_weight_dict,
+            'training_samples': len(X),
         }
 
     def predict_race_order(self, horse_ids: List[int], race_info: Dict = None) -> Dict:

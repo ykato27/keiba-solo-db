@@ -257,37 +257,42 @@ with tab2:
 
 with tab3:
     st.subheader("🎯 将来のレースを予測")
+    st.info("💡 このタブは、スクレイピングで取得した『今日以降のレース』を予測します")
 
     # レース選択
     try:
+        from datetime import datetime, timedelta
+
+        # 今日の日付を取得
+        today = datetime.now().date()
+        today_str = today.strftime("%Y-%m-%d")
+
         # 全開催日を取得
         all_dates = queries.get_all_race_dates()
 
         if all_dates:
-            # 最新の開催日から最新20レースを取得
-            races_list = []
-            for date in sorted(all_dates, reverse=True):
-                courses = queries.get_courses_by_date(date)
-                if courses:
-                    for course in courses:
-                        races = queries.get_races(date, course)
-                        if races:
-                            for race in races:
-                                races_list.append((
-                                    race["race_id"],
-                                    date,
-                                    course,
-                                    race["race_no"],
-                                    race.get("title", "無題")
-                                ))
-                if len(races_list) >= 20:
-                    races_list = races_list[:20]
-                    break
+            # 今日以降のレースを取得
+            future_races_list = []
+            for date in sorted(all_dates):  # 昇順（未来）でソート
+                if date >= today_str:  # 今日以降のみ
+                    courses = queries.get_courses_by_date(date)
+                    if courses:
+                        for course in courses:
+                            races = queries.get_races(date, course)
+                            if races:
+                                for race in races:
+                                    future_races_list.append((
+                                        race["race_id"],
+                                        date,
+                                        course,
+                                        race["race_no"],
+                                        race.get("title", "無題")
+                                    ))
 
-            if races_list:
+            if future_races_list:
                 race_options = {
                     f"{r[1]} - {r[2]} {r[3]}R {r[4]}": r[0]
-                    for r in races_list
+                    for r in future_races_list
                 }
 
                 selected_race_display = st.selectbox(
@@ -359,8 +364,9 @@ with tab3:
                                 status.update(label="❌ エラー", state="error")
                                 st.error(f"予測エラー: {e}")
 
-        else:
-            st.info("📋 レース情報がまだ登録されていません")
+            else:
+                st.info("📋 今日以降のレース情報がまだ登録されていません")
+                st.write("💡 「将来レース」ページからスクレイピングでレース情報を取得してください")
 
     except Exception as e:
         st.error(f"レース取得エラー: {e}")

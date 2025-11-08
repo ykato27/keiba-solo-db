@@ -13,9 +13,92 @@ SQLiteデータベースアクセス層
 import sqlite3
 import logging
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TypedDict
 
 logger = logging.getLogger(__name__)
+
+
+# ========================
+# 型定義（TypedDict）
+# ========================
+
+class RaceInfo(TypedDict, total=False):
+    """レース情報"""
+    race_id: int
+    race_no: int
+    distance_m: int
+    surface: str
+    going: str
+    grade: str
+    title: str
+
+
+class RaceEntry(TypedDict, total=False):
+    """出走馬情報"""
+    entry_id: int
+    horse_id: int
+    horse_name: str
+    jockey_id: Optional[int]
+    jockey_name: Optional[str]
+    trainer_id: Optional[int]
+    trainer_name: Optional[str]
+    frame_no: int
+    horse_no: int
+    age: int
+    weight_carried: float
+    finish_pos: Optional[int]
+    finish_time_seconds: Optional[float]
+    margin: Optional[str]
+    odds: Optional[float]
+    popularity: Optional[int]
+    corner_order: Optional[str]
+    remark: Optional[str]
+    win_rate: float
+    place_rate: float
+    show_rate: float
+    races_count: int
+    recent_score: float
+
+
+class HorseInfo(TypedDict, total=False):
+    """馬の詳細情報"""
+    horse_id: int
+    raw_name: str
+    sex: str
+    birth_year: int
+    races_count: int
+    win_rate: float
+    place_rate: float
+    show_rate: float
+    recent_score: float
+    distance_pref: str
+    surface_pref: str
+    updated_at: str
+
+
+class RaceHistory(TypedDict, total=False):
+    """馬の過去成績"""
+    race_id: int
+    race_date: str
+    course: str
+    race_no: int
+    distance_m: int
+    surface: str
+    going: str
+    grade: str
+    title: str
+    frame_no: int
+    horse_no: int
+    age: int
+    weight_carried: float
+    finish_pos: Optional[int]
+    finish_time_seconds: Optional[float]
+    margin: Optional[str]
+    odds: Optional[float]
+    popularity: Optional[int]
+    corner_order: Optional[str]
+    jockey_name: Optional[str]
+    trainer_name: Optional[str]
 
 # プロジェクトルートを基準にパス設定
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -151,7 +234,7 @@ def get_courses_by_date(race_date: str) -> List[str]:
         conn.close()
 
 
-def get_races_by_date_and_course(race_date: str, course: str) -> List[Dict[str, Any]]:
+def get_races_by_date_and_course(race_date: str, course: str) -> List[RaceInfo]:
     """指定日と開催場のレース一覧を取得
 
     Args:
@@ -186,7 +269,7 @@ def get_races_by_date_and_course(race_date: str, course: str) -> List[Dict[str, 
         conn.close()
 
 
-def get_race_entries(race_id: int) -> List[Dict[str, Any]]:
+def get_race_entries(race_id: int) -> List[RaceEntry]:
     """レースの出走馬一覧を取得
 
     Args:
@@ -240,7 +323,7 @@ def get_race_entries(race_id: int) -> List[Dict[str, Any]]:
         conn.close()
 
 
-def get_horse_details(horse_id: int) -> Optional[Dict[str, Any]]:
+def get_horse_details(horse_id: int) -> Optional[HorseInfo]:
     """馬の詳細情報を取得
 
     Args:
@@ -279,7 +362,7 @@ def get_horse_details(horse_id: int) -> Optional[Dict[str, Any]]:
         conn.close()
 
 
-def get_horse_race_history(horse_id: int, limit: int = 50) -> List[Dict[str, Any]]:
+def get_horse_race_history(horse_id: int, limit: int = 50) -> List[RaceHistory]:
     """馬の過去成績を取得
 
     Args:

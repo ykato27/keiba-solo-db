@@ -28,7 +28,8 @@ st.set_page_config(
 )
 
 # CSS スタイル
-st.markdown("""
+st.markdown(
+    """
 <style>
     .metric-card {
         background-color: #f0f2f6;
@@ -44,7 +45,9 @@ st.markdown("""
         border-radius: 5px;
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # ========================
 # 初期化
@@ -61,6 +64,7 @@ if not db.verify_schema():
 # ========================
 
 from app.sidebar_utils import render_sidebar
+
 render_sidebar()
 
 # ⚙️ 管理者パネル
@@ -73,9 +77,9 @@ if st.sidebar.button("📥 本番データを投入", use_container_width=True):
     with st.sidebar.status("処理中...", expanded=True) as status:
         st.write(f"📊 {years}年分のデータを生成中...")
         races = test_data.generate_test_races(years=years)
-        horses = test_data.generate_test_horses(count=150 + years*30)
-        jockeys = test_data.generate_test_jockeys(count=40 + years*10)
-        trainers = test_data.generate_test_trainers(count=40 + years*10)
+        horses = test_data.generate_test_horses(count=150 + years * 30)
+        jockeys = test_data.generate_test_jockeys(count=40 + years * 10)
+        trainers = test_data.generate_test_trainers(count=40 + years * 10)
         entries = test_data.generate_test_entries(races, horses, jockeys, trainers)
 
         st.write(f"✅ レース: {len(races):,}件")
@@ -130,7 +134,9 @@ if st.sidebar.button("📥 本番データを投入", use_container_width=True):
 
             total_time = time.time() - start_time
             status.update(label="✅ 完了!", state="complete")
-            st.success(f"✨ 本番データの投入が完了しました！\n\n総処理時間: {progress_utils.format_duration(total_time)}\n\nページを下にスクロールしてデータを閲覧できます。")
+            st.success(
+                f"✨ 本番データの投入が完了しました！\n\n総処理時間: {progress_utils.format_duration(total_time)}\n\nページを下にスクロールしてデータを閲覧できます。"
+            )
 
             # キャッシュをクリア
             st.cache_data.clear()
@@ -139,6 +145,7 @@ if st.sidebar.button("📥 本番データを投入", use_container_width=True):
             status.update(label="❌ エラー", state="error")
             st.error(f"エラーが発生しました: {e}")
             import traceback
+
             st.code(traceback.format_exc())
 
 st.sidebar.markdown("---")
@@ -177,6 +184,7 @@ st.subheader("🔍 検索")
 
 # 月を抽出してユニークにして、最新順にソート
 from datetime import datetime
+
 unique_months = sorted(set(d[:7] for d in all_dates), reverse=True)  # YYYY-MM形式, 最新順
 
 col1, col2 = st.columns([2, 3])
@@ -189,17 +197,12 @@ with col1:
     )
 
 # 選択月の全開催日を取得（最新順）
-month_dates = sorted(
-    [d for d in all_dates if d.startswith(selected_month)],
-    reverse=True
-)
+month_dates = sorted([d for d in all_dates if d.startswith(selected_month)], reverse=True)
 
 # 月内の全開催場を取得
-all_courses_in_month = sorted(set(
-    course
-    for date in month_dates
-    for course in (queries.get_courses_by_date(date) or [])
-))
+all_courses_in_month = sorted(
+    set(course for date in month_dates for course in (queries.get_courses_by_date(date) or []))
+)
 
 with col2:
     if all_courses_in_month:
@@ -207,7 +210,7 @@ with col2:
             "開催場（複数選択可）",
             options=all_courses_in_month,
             default=all_courses_in_month,  # デフォルト全選択
-            help="全て選択で全会場のレースを表示"
+            help="全て選択で全会場のレースを表示",
         )
         if not selected_courses:
             st.error("❌ 最低1つ以上の会場を選択してください")
@@ -229,10 +232,7 @@ course_colors = {
 }
 
 # 表示対象：選択会場のみのレース情報を取得
-display_dates = sorted(
-    [d for d in month_dates],
-    reverse=True
-)
+display_dates = sorted([d for d in month_dates], reverse=True)
 
 st.markdown(f"### {selected_month[:4]}年{selected_month[-2:]}月 - {', '.join(selected_courses)}")
 st.markdown(f"**{len(display_dates)} 日開催**")
@@ -287,15 +287,19 @@ if display_dates:
                                 st.markdown(
                                     f'<div style="background-color: {course_colors[course]}; '
                                     f'padding: 8px; border-radius: 4px; margin-bottom: 8px;">'
-                                    f'<b>{course}</b></div>',
-                                    unsafe_allow_html=True
+                                    f"<b>{course}</b></div>",
+                                    unsafe_allow_html=True,
                                 )
 
                                 # レース情報
                                 st.markdown(f"**R{race['race_no']}** {race.get('title', '無題')}")
                                 st.caption(f"{race['distance_m']}m / {race['surface']}")
 
-                                if st.button("詳細を見る", key=f"race_{race_id}_{race_date}", use_container_width=True):
+                                if st.button(
+                                    "詳細を見る",
+                                    key=f"race_{race_id}_{race_date}",
+                                    use_container_width=True,
+                                ):
                                     st.session_state.selected_race_id = race_id
                                     st.switch_page("pages/8_Race.py")
 

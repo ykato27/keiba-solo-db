@@ -45,12 +45,34 @@ def render_sidebar():
     # 🔍 高速ナビゲーション
     st.sidebar.subheader("🔍 ページ移動")
 
-    st.sidebar.button("🚀 モデル学習", use_container_width=True, on_click=lambda: st.switch_page("pages/4_ModelTraining.py"))
-    st.sidebar.button("🔮 レース予測", use_container_width=True, on_click=lambda: st.switch_page("pages/5_Prediction.py"))
-    st.sidebar.button("💰 馬券推奨", use_container_width=True, on_click=lambda: st.switch_page("pages/6_Prediction_Enhanced.py"))
-    st.sidebar.button("📅 将来レース", use_container_width=True, on_click=lambda: st.switch_page("pages/2_FutureRaces.py"))
-    st.sidebar.button("📊 データエクスポート", use_container_width=True, on_click=lambda: st.switch_page("pages/3_DataExport.py"))
-    st.sidebar.button("🏠 ホーム", use_container_width=True, on_click=lambda: st.switch_page("Home.py"))
+    st.sidebar.button(
+        "🚀 モデル学習",
+        use_container_width=True,
+        on_click=lambda: st.switch_page("pages/4_ModelTraining.py"),
+    )
+    st.sidebar.button(
+        "🔮 レース予測",
+        use_container_width=True,
+        on_click=lambda: st.switch_page("pages/5_Prediction.py"),
+    )
+    st.sidebar.button(
+        "💰 馬券推奨",
+        use_container_width=True,
+        on_click=lambda: st.switch_page("pages/6_Prediction_Enhanced.py"),
+    )
+    st.sidebar.button(
+        "📅 将来レース",
+        use_container_width=True,
+        on_click=lambda: st.switch_page("pages/2_FutureRaces.py"),
+    )
+    st.sidebar.button(
+        "📊 データエクスポート",
+        use_container_width=True,
+        on_click=lambda: st.switch_page("pages/3_DataExport.py"),
+    )
+    st.sidebar.button(
+        "🏠 ホーム", use_container_width=True, on_click=lambda: st.switch_page("Home.py")
+    )
 
     st.sidebar.markdown("---")
 

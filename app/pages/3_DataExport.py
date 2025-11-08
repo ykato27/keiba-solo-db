@@ -69,6 +69,7 @@ st.markdown("---")
 # ========================
 
 from app.sidebar_utils import render_sidebar
+
 render_sidebar()
 
 # ========================
@@ -85,7 +86,7 @@ export_type = st.radio(
         "3. 馬のメトリクス",
         "4. 学習用特徴量データ",
     ],
-    help="ダウンロードするデータの種類を選択してください"
+    help="ダウンロードするデータの種類を選択してください",
 )
 
 st.markdown("---")
@@ -100,22 +101,15 @@ if "1. レース情報" in export_type:
     col1, col2 = st.columns(2)
 
     with col1:
-        start_date = st.date_input(
-            "開始日",
-            value=datetime.now() - timedelta(days=30)
-        )
+        start_date = st.date_input("開始日", value=datetime.now() - timedelta(days=30))
 
     with col2:
-        end_date = st.date_input(
-            "終了日",
-            value=datetime.now()
-        )
+        end_date = st.date_input("終了日", value=datetime.now())
 
     if st.button("レース情報をCSVでダウンロード", type="primary", use_container_width=True):
         with st.spinner("レース情報を取得中..."):
             csv_data = csv_export.export_all_races_to_csv(
-                start_date=str(start_date),
-                end_date=str(end_date)
+                start_date=str(start_date), end_date=str(end_date)
             )
 
             if csv_data:
@@ -138,9 +132,7 @@ elif "2. 出走馬情報（詳細）" in export_type:
     st.subheader("🐴 出走馬情報エクスポート")
 
     export_scope = st.radio(
-        "エクスポート範囲",
-        options=["全データ", "期間指定", "レース指定"],
-        horizontal=True
+        "エクスポート範囲", options=["全データ", "期間指定", "レース指定"], horizontal=True
     )
 
     if export_scope == "期間指定":
@@ -148,23 +140,16 @@ elif "2. 出走馬情報（詳細）" in export_type:
 
         with col1:
             start_date = st.date_input(
-                "開始日",
-                value=datetime.now() - timedelta(days=30),
-                key="entry_start"
+                "開始日", value=datetime.now() - timedelta(days=30), key="entry_start"
             )
 
         with col2:
-            end_date = st.date_input(
-                "終了日",
-                value=datetime.now(),
-                key="entry_end"
-            )
+            end_date = st.date_input("終了日", value=datetime.now(), key="entry_end")
 
         if st.button("出走馬情報をCSVでダウンロード", type="primary", use_container_width=True):
             with st.spinner("出走馬情報を取得中..."):
                 csv_data = csv_export.export_entry_details_to_csv(
-                    start_date=str(start_date),
-                    end_date=str(end_date)
+                    start_date=str(start_date), end_date=str(end_date)
                 )
 
                 if csv_data:
@@ -201,7 +186,9 @@ elif "2. 出走馬情報（詳細）" in export_type:
 
                 if races:
                     race_options = {
-                        race['race_id']: f"R{race['race_no']} - {race.get('title', '無題')} ({race['distance_m']}m / {race['surface']})"
+                        race[
+                            "race_id"
+                        ]: f"R{race['race_no']} - {race.get('title', '無題')} ({race['distance_m']}m / {race['surface']})"
                         for race in races
                     }
 
@@ -211,9 +198,13 @@ elif "2. 出走馬情報（詳細）" in export_type:
                         format_func=lambda x: race_options[x],
                     )
 
-                    if st.button("出走馬情報をCSVでダウンロード", type="primary", use_container_width=True):
+                    if st.button(
+                        "出走馬情報をCSVでダウンロード", type="primary", use_container_width=True
+                    ):
                         with st.spinner("出走馬情報を取得中..."):
-                            csv_data = csv_export.export_entry_details_to_csv(race_id=selected_race_id)
+                            csv_data = csv_export.export_entry_details_to_csv(
+                                race_id=selected_race_id
+                            )
 
                             if csv_data:
                                 st.download_button(
@@ -227,7 +218,9 @@ elif "2. 出走馬情報（詳細）" in export_type:
                                 st.warning("データが見つかりません")
 
     else:  # 全データ
-        st.warning("⚠️ 全データエクスポートは大量データを処理するため時間がかかります（最大10,000件）")
+        st.warning(
+            "⚠️ 全データエクスポートは大量データを処理するため時間がかかります（最大10,000件）"
+        )
         if st.button("全出走馬情報をCSVでダウンロード", type="primary", use_container_width=True):
             with st.spinner("出走馬情報を取得中... (この処理には時間がかかります)"):
                 try:
@@ -277,13 +270,15 @@ elif "3. 馬のメトリクス" in export_type:
 elif "4. 学習用特徴量データ" in export_type:
     st.subheader("🤖 学習用特徴量データエクスポート")
 
-    st.info("""
+    st.info(
+        """
     **注意**: このエクスポートには以下の情報が含まれます：
     - 着順が記録されているエントリのみ（教師あり学習用）
     - 60+個の複合特徴量（WHO, WHEN, RACE, ENTRY, PEDIGREE）
     - ターゲット変数（1着=0, 2-3着=1, その他=2）
     - 特徴量の計算には時間がかかります
-    """)
+    """
+    )
 
     if st.button("学習用特徴量をCSVでダウンロード", type="primary", use_container_width=True):
         with st.spinner("特徴量を計算中... (この処理には時間がかかります)"):
@@ -298,7 +293,9 @@ elif "4. 学習用特徴量データ" in export_type:
                         mime="text/csv",
                     )
                     st.success(f"✓ 特徴量データを取得しました")
-                    st.info("このデータはXGBoost、LightGBM、Random Forestなどの機械学習モデルの学習に使用できます")
+                    st.info(
+                        "このデータはXGBoost、LightGBM、Random Forestなどの機械学習モデルの学習に使用できます"
+                    )
                 else:
                     st.warning("データが見つかりません")
 

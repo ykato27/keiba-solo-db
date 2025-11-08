@@ -38,11 +38,13 @@ class FeatureDiagnostics:
         try:
             from statsmodels.stats.outliers_influence import variance_inflation_factor
         except ImportError:
-            return pd.DataFrame({
-                'Feature': feature_names,
-                'VIF': [np.nan] * len(feature_names),
-                'Status': ['statsmodels not installed'] * len(feature_names)
-            })
+            return pd.DataFrame(
+                {
+                    "Feature": feature_names,
+                    "VIF": [np.nan] * len(feature_names),
+                    "Status": ["statsmodels not installed"] * len(feature_names),
+                }
+            )
 
         # NaN と inf を処理
         X_clean = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
@@ -52,33 +54,27 @@ class FeatureDiagnostics:
             try:
                 vif = variance_inflation_factor(X_clean, i)
                 status = self._vif_status(vif)
-                vif_data.append({
-                    'Feature': feature_names[i],
-                    'VIF': vif,
-                    'Status': status
-                })
+                vif_data.append({"Feature": feature_names[i], "VIF": vif, "Status": status})
             except Exception as e:
-                vif_data.append({
-                    'Feature': feature_names[i],
-                    'VIF': np.nan,
-                    'Status': f'Error: {str(e)[:30]}'
-                })
+                vif_data.append(
+                    {"Feature": feature_names[i], "VIF": np.nan, "Status": f"Error: {str(e)[:30]}"}
+                )
 
-        return pd.DataFrame(vif_data).sort_values('VIF', ascending=False)
+        return pd.DataFrame(vif_data).sort_values("VIF", ascending=False)
 
     @staticmethod
     def _vif_status(vif: float) -> str:
         """VIF スコアからステータスを判定"""
         if np.isnan(vif) or np.isinf(vif):
-            return '⚠️ 計算不可'
+            return "⚠️ 計算不可"
         elif vif > 10:
-            return '🔴 削除推奨 (VIF > 10)'
+            return "🔴 削除推奨 (VIF > 10)"
         elif vif > 5:
-            return '🟡 確認推奨 (VIF > 5)'
+            return "🟡 確認推奨 (VIF > 5)"
         elif vif > 2:
-            return '🟢 注意 (VIF > 2)'
+            return "🟢 注意 (VIF > 2)"
         else:
-            return '✅ 良好 (VIF <= 2)'
+            return "✅ 良好 (VIF <= 2)"
 
     @staticmethod
     def calculate_correlation_matrix(X: np.ndarray, feature_names: List[str]) -> pd.DataFrame:
@@ -98,17 +94,11 @@ class FeatureDiagnostics:
 
         corr_matrix = np.corrcoef(X_clean.T)
 
-        return pd.DataFrame(
-            corr_matrix,
-            index=feature_names,
-            columns=feature_names
-        )
+        return pd.DataFrame(corr_matrix, index=feature_names, columns=feature_names)
 
     @staticmethod
     def find_highly_correlated_pairs(
-        X: np.ndarray,
-        feature_names: List[str],
-        threshold: float = 0.8
+        X: np.ndarray, feature_names: List[str], threshold: float = 0.8
     ) -> List[Dict]:
         """
         高度に相関した特徴量ペアを検出
@@ -128,24 +118,26 @@ class FeatureDiagnostics:
             for j in range(i + 1, len(feature_names)):
                 corr = abs(corr_matrix.iloc[i, j])
                 if corr > threshold:
-                    pairs.append({
-                        'Feature 1': feature_names[i],
-                        'Feature 2': feature_names[j],
-                        'Correlation': corr,
-                        'Recommendation': self._correlation_recommendation(corr)
-                    })
+                    pairs.append(
+                        {
+                            "Feature 1": feature_names[i],
+                            "Feature 2": feature_names[j],
+                            "Correlation": corr,
+                            "Recommendation": self._correlation_recommendation(corr),
+                        }
+                    )
 
-        return sorted(pairs, key=lambda x: x['Correlation'], reverse=True)
+        return sorted(pairs, key=lambda x: x["Correlation"], reverse=True)
 
     @staticmethod
     def _correlation_recommendation(corr: float) -> str:
         """相関係数からの推奨を生成"""
         if corr > 0.95:
-            return '🔴 どちらか削除'
+            return "🔴 どちらか削除"
         elif corr > 0.85:
-            return '🟡 関連性確認後、片方削除を検討'
+            return "🟡 関連性確認後、片方削除を検討"
         else:
-            return '⚠️ 監視'
+            return "⚠️ 監視"
 
     @staticmethod
     def check_feature_variance(X: np.ndarray, feature_names: List[str]) -> pd.DataFrame:
@@ -166,30 +158,32 @@ class FeatureDiagnostics:
         means = np.mean(X_clean, axis=0)
 
         # Coefficient of Variation
-        cv = np.where(means != 0, variances / (means ** 2), 0)
+        cv = np.where(means != 0, variances / (means**2), 0)
 
         variance_data = []
         for i, feature_name in enumerate(feature_names):
-            variance_data.append({
-                'Feature': feature_name,
-                'Variance': variances[i],
-                'Mean': means[i],
-                'Std': np.sqrt(variances[i]),
-                'CV': cv[i],
-                'Status': self._variance_status(variances[i])
-            })
+            variance_data.append(
+                {
+                    "Feature": feature_name,
+                    "Variance": variances[i],
+                    "Mean": means[i],
+                    "Std": np.sqrt(variances[i]),
+                    "CV": cv[i],
+                    "Status": self._variance_status(variances[i]),
+                }
+            )
 
-        return pd.DataFrame(variance_data).sort_values('Variance', ascending=False)
+        return pd.DataFrame(variance_data).sort_values("Variance", ascending=False)
 
     @staticmethod
     def _variance_status(variance: float) -> str:
         """分散からのステータスを判定"""
         if variance < 0.001:
-            return '🔴 ほぼ定数 (削除推奨)'
+            return "🔴 ほぼ定数 (削除推奨)"
         elif variance < 0.01:
-            return '🟡 低分散'
+            return "🟡 低分散"
         else:
-            return '✅ 正常'
+            return "✅ 正常"
 
     @staticmethod
     def check_missing_values(X: np.ndarray, feature_names: List[str]) -> pd.DataFrame:
@@ -209,30 +203,30 @@ class FeatureDiagnostics:
 
         missing_data = []
         for i, feature_name in enumerate(feature_names):
-            missing_data.append({
-                'Feature': feature_name,
-                'Missing Count': int(missing_counts[i]),
-                'Missing %': missing_pct[i],
-                'Status': self._missing_status(missing_pct[i])
-            })
+            missing_data.append(
+                {
+                    "Feature": feature_name,
+                    "Missing Count": int(missing_counts[i]),
+                    "Missing %": missing_pct[i],
+                    "Status": self._missing_status(missing_pct[i]),
+                }
+            )
 
-        return pd.DataFrame(missing_data).sort_values('Missing %', ascending=False)
+        return pd.DataFrame(missing_data).sort_values("Missing %", ascending=False)
 
     @staticmethod
     def _missing_status(missing_pct: float) -> str:
         """欠損率からのステータスを判定"""
         if missing_pct > 30:
-            return '🔴 削除推奨'
+            return "🔴 削除推奨"
         elif missing_pct > 10:
-            return '🟡 補完方法を検討'
+            return "🟡 補完方法を検討"
         else:
-            return '✅ 許容範囲'
+            return "✅ 許容範囲"
 
     @staticmethod
     def generate_diagnostics_report(
-        X: np.ndarray,
-        feature_names: List[str],
-        output_path: Optional[Path] = None
+        X: np.ndarray, feature_names: List[str], output_path: Optional[Path] = None
     ) -> Dict:
         """
         包括的な診断レポートを生成
@@ -246,25 +240,29 @@ class FeatureDiagnostics:
             診断結果の辞書
         """
         report = {
-            'vif_analysis': FeatureDiagnostics.calculate_vif(X, feature_names),
-            'correlation_pairs': FeatureDiagnostics.find_highly_correlated_pairs(X, feature_names),
-            'variance_analysis': FeatureDiagnostics.check_feature_variance(X, feature_names),
-            'missing_analysis': FeatureDiagnostics.check_missing_values(X, feature_names),
-            'summary': {
-                'total_features': len(feature_names),
-                'high_vif_features': len([f for f in report.get('vif_analysis', []) if 'VIF > 10' in str(f.get('Status', ''))]),
-                'high_corr_pairs': len(report.get('correlation_pairs', [])),
-            }
+            "vif_analysis": FeatureDiagnostics.calculate_vif(X, feature_names),
+            "correlation_pairs": FeatureDiagnostics.find_highly_correlated_pairs(X, feature_names),
+            "variance_analysis": FeatureDiagnostics.check_feature_variance(X, feature_names),
+            "missing_analysis": FeatureDiagnostics.check_missing_values(X, feature_names),
+            "summary": {
+                "total_features": len(feature_names),
+                "high_vif_features": len(
+                    [
+                        f
+                        for f in report.get("vif_analysis", [])
+                        if "VIF > 10" in str(f.get("Status", ""))
+                    ]
+                ),
+                "high_corr_pairs": len(report.get("correlation_pairs", [])),
+            },
         }
 
         if output_path:
             import json
-            with open(output_path, 'w') as f:
+
+            with open(output_path, "w") as f:
                 json.dump(
-                    {k: v for k, v in report.items() if k != 'summary'},
-                    f,
-                    indent=2,
-                    default=str
+                    {k: v for k, v in report.items() if k != "summary"}, f, indent=2, default=str
                 )
 
         return report
@@ -279,7 +277,7 @@ def diagnose_features_simple(X: np.ndarray, feature_names: List[str]) -> Dict:
     diag = FeatureDiagnostics()
 
     return {
-        'variance': diag.check_feature_variance(X, feature_names),
-        'missing': diag.check_missing_values(X, feature_names),
-        'correlations': diag.find_highly_correlated_pairs(X, feature_names, threshold=0.85),
+        "variance": diag.check_feature_variance(X, feature_names),
+        "missing": diag.check_missing_values(X, feature_names),
+        "correlations": diag.find_highly_correlated_pairs(X, feature_names, threshold=0.85),
     }

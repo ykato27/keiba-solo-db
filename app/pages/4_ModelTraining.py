@@ -68,16 +68,19 @@ st.markdown("---")
 # ========================
 
 from app.sidebar_utils import render_sidebar
+
 render_sidebar()
 
 # ========================
 # Tabs: モデル訓練とバックテスト
 # ========================
 
-tab1, tab2 = st.tabs([
-    "🚀 モデル訓練",
-    "📊 バックテスト",
-])
+tab1, tab2 = st.tabs(
+    [
+        "🚀 モデル訓練",
+        "📊 バックテスト",
+    ]
+)
 
 with tab1:
     st.subheader("🚀 機械学習モデルを訓練")
@@ -88,7 +91,7 @@ with tab1:
         model_choice = st.radio(
             "モデル選択",
             options=["LightGBM（推奨）", "ランダムフォレスト"],
-            help="LightGBMが推奨（精度が高い）"
+            help="LightGBMが推奨（精度が高い）",
         )
 
     with col2:
@@ -98,7 +101,7 @@ with tab1:
             min_value=3,
             max_value=36,
             value=9,
-            help="選択値 × 10日（例：9 = 90日）"
+            help="選択値 × 10日（例：9 = 90日）",
         )
         train_days = days_slider * 10
 
@@ -110,6 +113,7 @@ with tab1:
                     model = pml.AdvancedRacePredictionModel()
                 else:
                     from app import prediction_model as pm
+
                     model = pm.RacePredictionModel()
 
                 st.write(f"📊 過去 {train_days} 日間のデータで訓練を開始...")
@@ -137,25 +141,19 @@ with tab1:
                     st.metric(
                         "平均精度",
                         f"{results.get('mean_cv_accuracy', 0):.2%}",
-                        delta=f"±{results.get('std_cv_accuracy', 0):.2%}"
+                        delta=f"±{results.get('std_cv_accuracy', 0):.2%}",
                     )
 
                 with col2:
-                    st.metric(
-                        "平均 F1 スコア",
-                        f"{results.get('mean_cv_f1', 0):.4f}"
-                    )
+                    st.metric("平均 F1 スコア", f"{results.get('mean_cv_f1', 0):.4f}")
 
                 with col3:
-                    st.metric(
-                        "モデル",
-                        model_choice.split("（")[0]
-                    )
+                    st.metric("モデル", model_choice.split("（")[0])
 
                 # Fold詳細
-                if results.get('fold_info'):
+                if results.get("fold_info"):
                     with st.expander("Fold別詳細を表示", expanded=False):
-                        fold_df = pd.DataFrame(results['fold_info'])
+                        fold_df = pd.DataFrame(results["fold_info"])
                         st.dataframe(fold_df, use_container_width=True)
 
                 st.success("✨ モデルが正常に訓練されました")
@@ -171,17 +169,11 @@ with tab2:
 
     with col1:
         start_date = st.date_input(
-            "開始日",
-            value=datetime.now().date() - timedelta(days=90),
-            help="バックテスト開始日"
+            "開始日", value=datetime.now().date() - timedelta(days=90), help="バックテスト開始日"
         )
 
     with col2:
-        end_date = st.date_input(
-            "終了日",
-            value=datetime.now().date(),
-            help="バックテスト終了日"
-        )
+        end_date = st.date_input("終了日", value=datetime.now().date(), help="バックテスト終了日")
 
     if st.button("🔍 バックテストを実行", type="primary", use_container_width=True):
         with st.status("バックテスト実行中...", expanded=True) as status:
@@ -197,10 +189,7 @@ with tab2:
 
                 # バックテスト実行
                 runner = bt.BacktestRunner(model)
-                results = runner.run_backtest(
-                    start_date=str(start_date),
-                    end_date=str(end_date)
-                )
+                results = runner.run_backtest(start_date=str(start_date), end_date=str(end_date))
 
                 status.update(label="✅ 完了", state="complete")
 
@@ -210,35 +199,22 @@ with tab2:
                 col1, col2, col3, col4 = st.columns(4)
 
                 with col1:
-                    st.metric(
-                        "総レース数",
-                        results.get('total_races', 0)
-                    )
+                    st.metric("総レース数", results.get("total_races", 0))
 
                 with col2:
-                    st.metric(
-                        "1着予測 的中率",
-                        f"{results.get('win_accuracy', 0):.1%}"
-                    )
+                    st.metric("1着予測 的中率", f"{results.get('win_accuracy', 0):.1%}")
 
                 with col3:
-                    st.metric(
-                        "2-3着予測 的中率",
-                        f"{results.get('place_accuracy', 0):.1%}"
-                    )
+                    st.metric("2-3着予測 的中率", f"{results.get('place_accuracy', 0):.1%}")
 
                 with col4:
-                    st.metric(
-                        "総予測数",
-                        results.get('total_predictions', 0)
-                    )
+                    st.metric("総予測数", results.get("total_predictions", 0))
 
                 # 詳細結果
-                if results.get('race_details'):
+                if results.get("race_details"):
                     with st.expander("詳細結果を表示", expanded=False):
                         st.dataframe(
-                            pd.DataFrame(results['race_details']),
-                            use_container_width=True
+                            pd.DataFrame(results["race_details"]), use_container_width=True
                         )
 
             except Exception as e:
@@ -247,7 +223,8 @@ with tab2:
 
 # 説明セクション
 st.markdown("---")
-st.markdown("""
+st.markdown(
+    """
 ### 📚 モデル学習について
 
 **バックテスト**
@@ -262,4 +239,5 @@ st.markdown("""
 **注意**
 - モデル訓練には数分かかる場合があります
 - 訓練後は、別ページ（Prediction, Prediction Enhanced）で予測を実施してください
-""")
+"""
+)

@@ -33,6 +33,7 @@ from .kelly_precondition_validator import KellyPreconditionValidator
 @dataclass
 class BettingRecommendation:
     """馬券推奨結果"""
+
     horse_name: str
     win_probability: float
     expected_odds: float
@@ -50,9 +51,7 @@ class BettingOptimizer:
 
     @staticmethod
     def calculate_kelly_fraction(
-        win_probability: float,
-        expected_odds: float,
-        safety_factor: float = KELLY_SAFETY_FACTOR
+        win_probability: float, expected_odds: float, safety_factor: float = KELLY_SAFETY_FACTOR
     ) -> float:
         """
         Kelly基準から最適な賭け額の割合を計算
@@ -92,9 +91,7 @@ class BettingOptimizer:
 
     @staticmethod
     def calculate_expected_value(
-        win_probability: float,
-        expected_odds: float,
-        bet_amount: float
+        win_probability: float, expected_odds: float, bet_amount: float
     ) -> Tuple[float, float]:
         """
         期待値と期待利益を計算
@@ -120,9 +117,7 @@ class BettingOptimizer:
         return expected_roi, expected_profit
 
     @staticmethod
-    def validate_predictions(
-        predictions: List[Dict]
-    ) -> Dict:
+    def validate_predictions(predictions: List[Dict]) -> Dict:
         """
         Kelly基準の前提条件をチェック（期待値検証）
 
@@ -139,7 +134,7 @@ class BettingOptimizer:
         predictions: List[Dict],
         total_budget: float,
         min_probability: float = 0.05,
-        validate_preconditions: bool = True
+        validate_preconditions: bool = True,
     ) -> Tuple[List[BettingRecommendation], Dict]:
         """
         複数の馬に対する最適な配分を計算
@@ -167,18 +162,20 @@ class BettingOptimizer:
         # Kelly基準の前提条件をチェック
         if validate_preconditions:
             validation_result = KellyPreconditionValidator.validate_portfolio(predictions)
-            print("\n" + "="*80)
+            print("\n" + "=" * 80)
             print("Kelly基準 前提条件検証結果:")
-            print("="*80)
+            print("=" * 80)
             KellyPreconditionValidator.print_validation_report(validation_result)
 
             # 期待値がプラスの予測のみをフィルタリング
-            positive_ev_preds, negative_ev_preds = KellyPreconditionValidator.filter_positive_ev_predictions(
-                predictions
+            positive_ev_preds, negative_ev_preds = (
+                KellyPreconditionValidator.filter_positive_ev_predictions(predictions)
             )
 
             if not positive_ev_preds:
-                print(f"\n⚠️ 警告: 期待値がプラスの予測がありません（{len(negative_ev_preds)}頭中0頭）")
+                print(
+                    f"\n⚠️ 警告: 期待値がプラスの予測がありません（{len(negative_ev_preds)}頭中0頭）"
+                )
                 print("賭けるべきではありません！")
                 return [], validation_result
 
@@ -187,9 +184,9 @@ class BettingOptimizer:
             predictions_to_use = predictions
 
         for pred in predictions_to_use:
-            horse_name = pred.get('horse_name', '不明')
-            win_prob = float(pred.get('win_probability', 0))
-            odds = float(pred.get('expected_odds', 1.0))
+            horse_name = pred.get("horse_name", "不明")
+            win_prob = float(pred.get("win_probability", 0))
+            odds = float(pred.get("expected_odds", 1.0))
 
             # フィルタリング: 確率が小さすぎる場合は除外
             if win_prob < min_probability:
@@ -216,18 +213,19 @@ class BettingOptimizer:
                     kelly_fraction=kelly_frac,
                     kelly_bet=bet_amount,
                     expected_roi=roi,
-                    expected_profit=profit
+                    expected_profit=profit,
                 )
             )
 
         # 期待ROIが高い順にソート
-        return sorted(recommendations, key=lambda x: x.expected_roi, reverse=True), validation_result
+        return (
+            sorted(recommendations, key=lambda x: x.expected_roi, reverse=True),
+            validation_result,
+        )
 
     @staticmethod
     def generate_scenario_recommendations(
-        predictions: List[Dict],
-        budgets: List[float] = None,
-        validate_once: bool = True
+        predictions: List[Dict], budgets: List[float] = None, validate_once: bool = True
     ) -> Dict[float, Tuple[List[BettingRecommendation], Dict]]:
         """
         複数の予算シナリオに対する推奨を生成
@@ -258,9 +256,7 @@ class BettingOptimizer:
         return scenarios
 
     @staticmethod
-    def calculate_portfolio_stats(
-        recommendations: List[BettingRecommendation]
-    ) -> Dict:
+    def calculate_portfolio_stats(recommendations: List[BettingRecommendation]) -> Dict:
         """
         ポートフォリオ全体の統計情報を計算
 
@@ -272,12 +268,12 @@ class BettingOptimizer:
         """
         if not recommendations:
             return {
-                'total_bet': 0,
-                'weighted_win_prob': 0,
-                'expected_total_profit': 0,
-                'expected_total_roi': 0,
-                'num_bets': 0,
-                'kelly_efficiency': 0
+                "total_bet": 0,
+                "weighted_win_prob": 0,
+                "expected_total_profit": 0,
+                "expected_total_roi": 0,
+                "num_bets": 0,
+                "kelly_efficiency": 0,
             }
 
         bets = np.array([r.kelly_bet for r in recommendations])
@@ -290,12 +286,12 @@ class BettingOptimizer:
         total_roi = (total_profit / total_bet * 100) if total_bet > 0 else 0
 
         return {
-            'total_bet': total_bet,
-            'weighted_win_prob': weighted_prob,
-            'expected_total_profit': total_profit,
-            'expected_total_roi': total_roi,
-            'num_bets': len(recommendations),
-            'kelly_efficiency': self._calculate_kelly_efficiency(recommendations)
+            "total_bet": total_bet,
+            "weighted_win_prob": weighted_prob,
+            "expected_total_profit": total_profit,
+            "expected_total_roi": total_roi,
+            "num_bets": len(recommendations),
+            "kelly_efficiency": self._calculate_kelly_efficiency(recommendations),
         }
 
     @staticmethod
@@ -313,9 +309,7 @@ class BettingOptimizer:
 
 # 簡易的な使用例用関数
 def recommend_bets(
-    predictions: List[Dict],
-    budget: float = 10000,
-    min_probability: float = 0.05
+    predictions: List[Dict], budget: float = 10000, min_probability: float = 0.05
 ) -> Tuple[List[BettingRecommendation], Dict]:
     """
     簡易的な馬券推奨関数

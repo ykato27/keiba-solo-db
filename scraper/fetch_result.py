@@ -71,7 +71,7 @@ def fetch_single_race_result(race_id: str) -> List[Dict[str, Any]]:
 
     except Exception as e:
         logger.error(f"結果取得エラー (race_id={race_id}): {e}")
-        _save_error_log(url, html if 'html' in locals() else "", str(e))
+        _save_error_log(url, html if "html" in locals() else "", str(e))
         return results
 
 

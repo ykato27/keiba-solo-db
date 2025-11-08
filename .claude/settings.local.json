@@ -25,7 +25,12 @@
       "Bash(git pull:*)",
       "Bash(python test_betting_optimizer.py:*)",
       "Bash(cd:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(cmd /c lint.bat)",
+      "Bash(python -m black:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m flake8:*)",
+      "Bash(python -m mypy:*)"
     ],
     "deny": [],
     "ask": []

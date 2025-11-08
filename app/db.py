@@ -22,8 +22,10 @@ logger = logging.getLogger(__name__)
 # 型定義（TypedDict）
 # ========================
 
+
 class RaceInfo(TypedDict, total=False):
     """レース情報"""
+
     race_id: int
     race_no: int
     distance_m: int
@@ -35,6 +37,7 @@ class RaceInfo(TypedDict, total=False):
 
 class RaceEntry(TypedDict, total=False):
     """出走馬情報"""
+
     entry_id: int
     horse_id: int
     horse_name: str
@@ -62,6 +65,7 @@ class RaceEntry(TypedDict, total=False):
 
 class HorseInfo(TypedDict, total=False):
     """馬の詳細情報"""
+
     horse_id: int
     raw_name: str
     sex: str
@@ -78,6 +82,7 @@ class HorseInfo(TypedDict, total=False):
 
 class RaceHistory(TypedDict, total=False):
     """馬の過去成績"""
+
     race_id: int
     race_date: str
     course: str
@@ -99,6 +104,7 @@ class RaceHistory(TypedDict, total=False):
     corner_order: Optional[str]
     jockey_name: Optional[str]
     trainer_name: Optional[str]
+
 
 # プロジェクトルートを基準にパス設定
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -184,6 +190,7 @@ def verify_schema() -> bool:
 # ========================
 # レース情報クエリ
 # ========================
+
 
 def get_race_dates(start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[str]:
     """開催日の一覧を取得

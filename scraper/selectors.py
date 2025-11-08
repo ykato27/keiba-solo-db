@@ -70,6 +70,7 @@ RESULT_REMARK = "td.remark, td:nth-child(14)"  # 備考
 # ヘルパー関数
 # ========================
 
+
 def get_selector(selector_name: str) -> str:
     """セレクタを名前で取得"""
     return globals().get(selector_name, "")

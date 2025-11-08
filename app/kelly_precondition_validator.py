@@ -17,6 +17,7 @@ from dataclasses import dataclass
 @dataclass
 class KellyPreconditionResult:
     """Kelly基準前提条件チェック結果"""
+
     horse_name: str
     win_probability: float
     expected_odds: float
@@ -39,7 +40,7 @@ class KellyPreconditionValidator:
         horse_name: str,
         win_probability: float,
         expected_odds: float,
-        min_ev_threshold: float = 0.01
+        min_ev_threshold: float = 0.01,
     ) -> KellyPreconditionResult:
         """
         単一の馬の Kelly 前提条件をチェック
@@ -62,7 +63,7 @@ class KellyPreconditionValidator:
             kelly_valid=True,
             errors=[],
             warnings=[],
-            recommendations=[]
+            recommendations=[],
         )
 
         # 1. 勝つ確率の妥当性チェック
@@ -101,21 +102,13 @@ class KellyPreconditionValidator:
 
         # 4. 期待値の評価（Kelly基準の必須条件）
         if expected_value < 0:
-            result.errors.append(
-                f"❌ 期待値がマイナスです（{expected_value_pct:.2f}%）"
-            )
+            result.errors.append(f"❌ 期待値がマイナスです（{expected_value_pct:.2f}%）")
             result.kelly_valid = False
-            result.recommendations.append(
-                "この馬には賭けるべきではありません（負の期待値）"
-            )
+            result.recommendations.append("この馬には賭けるべきではありません（負の期待値）")
         elif expected_value == 0:
-            result.errors.append(
-                "❌ 期待値がゼロです（ブレークイーブン）"
-            )
+            result.errors.append("❌ 期待値がゼロです（ブレークイーブン）")
             result.kelly_valid = False
-            result.recommendations.append(
-                "この馬には賭けるべきではありません（利益なし）"
-            )
+            result.recommendations.append("この馬には賭けるべきではありません（利益なし）")
         elif 0 < expected_value < min_ev_threshold:
             result.warnings.append(
                 f"⚠️ 警告: 期待値が非常に小さい（{expected_value_pct:.3f}%）。"
@@ -133,9 +126,7 @@ class KellyPreconditionValidator:
         return result
 
     @staticmethod
-    def validate_portfolio(
-        predictions: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def validate_portfolio(predictions: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         複数の馬の Kelly 前提条件を一括チェック
 
@@ -154,84 +145,83 @@ class KellyPreconditionValidator:
             検証結果の辞書
         """
         results = {
-            'total_horses': len(predictions),
-            'valid_horses': 0,
-            'invalid_horses': 0,
-            'warning_horses': 0,
-            'horses': [],
-            'portfolio_status': '',
-            'summary': {}
+            "total_horses": len(predictions),
+            "valid_horses": 0,
+            "invalid_horses": 0,
+            "warning_horses": 0,
+            "horses": [],
+            "portfolio_status": "",
+            "summary": {},
         }
 
         valid_predictions = []
 
         for pred in predictions:
-            horse_name = pred.get('horse_name', '不明')
-            win_prob = float(pred.get('win_probability', 0))
-            odds = float(pred.get('expected_odds', 1.0))
+            horse_name = pred.get("horse_name", "不明")
+            win_prob = float(pred.get("win_probability", 0))
+            odds = float(pred.get("expected_odds", 1.0))
 
             # 個別検証
-            validation = KellyPreconditionValidator.validate_single_bet(
-                horse_name, win_prob, odds
+            validation = KellyPreconditionValidator.validate_single_bet(horse_name, win_prob, odds)
+
+            results["horses"].append(
+                {
+                    "horse_name": validation.horse_name,
+                    "win_probability": validation.win_probability,
+                    "expected_odds": validation.expected_odds,
+                    "expected_value_pct": validation.expected_value_pct,
+                    "kelly_valid": validation.kelly_valid,
+                    "errors": validation.errors,
+                    "warnings": validation.warnings,
+                }
             )
 
-            results['horses'].append({
-                'horse_name': validation.horse_name,
-                'win_probability': validation.win_probability,
-                'expected_odds': validation.expected_odds,
-                'expected_value_pct': validation.expected_value_pct,
-                'kelly_valid': validation.kelly_valid,
-                'errors': validation.errors,
-                'warnings': validation.warnings,
-            })
-
             if validation.kelly_valid:
-                results['valid_horses'] += 1
+                results["valid_horses"] += 1
                 valid_predictions.append(pred)
             else:
-                results['invalid_horses'] += 1
+                results["invalid_horses"] += 1
 
             if validation.warnings:
-                results['warning_horses'] += 1
+                results["warning_horses"] += 1
 
         # ポートフォリオレベルの分析
-        if results['valid_horses'] == 0:
-            results['portfolio_status'] = (
+        if results["valid_horses"] == 0:
+            results["portfolio_status"] = (
                 f"❌ 致命的: 有効な予測がありません（{results['total_horses']}頭中0頭）。"
                 f"賭けるべきではありません"
             )
-        elif results['valid_horses'] < results['total_horses'] * 0.3:
-            results['portfolio_status'] = (
+        elif results["valid_horses"] < results["total_horses"] * 0.3:
+            results["portfolio_status"] = (
                 f"⚠️ 警告: 有効な予測が少ない（{results['valid_horses']}/{results['total_horses']}）。"
                 f"ポートフォリオが分散不足の可能性"
             )
         else:
-            results['portfolio_status'] = (
+            results["portfolio_status"] = (
                 f"✅ OK: {results['valid_horses']}/{results['total_horses']}頭が Kelly 基準を満たします"
             )
 
         # 期待値の統計
         if valid_predictions:
             evs = [
-                (pred.get('expected_odds', 1) - 1) * pred.get('win_probability', 0) -
-                (1 - pred.get('win_probability', 0))
+                (pred.get("expected_odds", 1) - 1) * pred.get("win_probability", 0)
+                - (1 - pred.get("win_probability", 0))
                 for pred in valid_predictions
             ]
-            results['summary'] = {
-                'valid_predictions_count': len(valid_predictions),
-                'mean_expected_value_pct': float(np.mean(evs) * 100),
-                'median_expected_value_pct': float(np.median(evs) * 100),
-                'min_expected_value_pct': float(np.min(evs) * 100),
-                'max_expected_value_pct': float(np.max(evs) * 100),
-                'total_expected_roi_pct': float(np.sum(evs) * 100),
+            results["summary"] = {
+                "valid_predictions_count": len(valid_predictions),
+                "mean_expected_value_pct": float(np.mean(evs) * 100),
+                "median_expected_value_pct": float(np.median(evs) * 100),
+                "min_expected_value_pct": float(np.min(evs) * 100),
+                "max_expected_value_pct": float(np.max(evs) * 100),
+                "total_expected_roi_pct": float(np.sum(evs) * 100),
             }
 
         return results
 
     @staticmethod
     def filter_positive_ev_predictions(
-        predictions: List[Dict[str, Any]],
-        min_ev_threshold: float = 0.01
+        predictions: List[Dict[str, Any]], min_ev_threshold: float = 0.01
     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         期待値がプラスの予測のみをフィルタリング
@@ -247,8 +237,8 @@ class KellyPreconditionValidator:
         negative_ev = []
 
         for pred in predictions:
-            win_prob = float(pred.get('win_probability', 0))
-            odds = float(pred.get('expected_odds', 1.0))
+            win_prob = float(pred.get("win_probability", 0))
+            odds = float(pred.get("expected_odds", 1.0))
 
             ev = (odds - 1) * win_prob - (1 - win_prob)
 
@@ -262,9 +252,9 @@ class KellyPreconditionValidator:
     @staticmethod
     def print_validation_report(results: Dict[str, Any]) -> None:
         """検証結果をコンソール出力"""
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("📊 Kelly基準 前提条件検証レポート")
-        print("="*80)
+        print("=" * 80)
 
         print(f"\n【全体統計】")
         print(f"  総馬数: {results['total_horses']}")
@@ -275,9 +265,9 @@ class KellyPreconditionValidator:
         print(f"\n【ポートフォリオ判定】")
         print(f"  {results['portfolio_status']}")
 
-        if results.get('summary'):
+        if results.get("summary"):
             print(f"\n【期待値統計（有効な予測のみ）】")
-            summary = results['summary']
+            summary = results["summary"]
             print(f"  平均期待値: {summary.get('mean_expected_value_pct', 0):.2f}%")
             print(f"  中央値期待値: {summary.get('median_expected_value_pct', 0):.2f}%")
             print(f"  最小期待値: {summary.get('min_expected_value_pct', 0):.2f}%")
@@ -285,13 +275,15 @@ class KellyPreconditionValidator:
             print(f"  総合期待ROI: {summary.get('total_expected_roi_pct', 0):.2f}%")
 
         print(f"\n【馬ごとの詳細】")
-        for horse in results['horses'][:10]:  # 最初の10頭のみ表示
-            status = "✅" if horse['kelly_valid'] else "❌"
+        for horse in results["horses"][:10]:  # 最初の10頭のみ表示
+            status = "✅" if horse["kelly_valid"] else "❌"
             print(f"\n  {status} {horse['horse_name']}")
-            print(f"     確率: {horse['win_probability']:.2%}, オッズ: {horse['expected_odds']:.2f}")
+            print(
+                f"     確率: {horse['win_probability']:.2%}, オッズ: {horse['expected_odds']:.2f}"
+            )
             print(f"     期待値: {horse['expected_value_pct']:.2f}%")
-            if horse['errors']:
-                for error in horse['errors']:
+            if horse["errors"]:
+                for error in horse["errors"]:
                     print(f"     {error}")
 
-        print("\n" + "="*80 + "\n")
+        print("\n" + "=" * 80 + "\n")

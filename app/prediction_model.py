@@ -49,9 +49,9 @@ class RacePredictionModel:
         """保存済みモデルを読み込み"""
         if self.model_path.exists() and self.scaler_path.exists():
             try:
-                with open(self.model_path, 'rb') as f:
+                with open(self.model_path, "rb") as f:
                     self.model = pickle.load(f)
-                with open(self.scaler_path, 'rb') as f:
+                with open(self.scaler_path, "rb") as f:
                     self.scaler = pickle.load(f)
                 self.is_trained = True
             except Exception as e:
@@ -62,9 +62,9 @@ class RacePredictionModel:
         """モデルを保存"""
         try:
             self.model_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.model_path, 'wb') as f:
+            with open(self.model_path, "wb") as f:
                 pickle.dump(self.model, f)
-            with open(self.scaler_path, 'wb') as f:
+            with open(self.scaler_path, "wb") as f:
                 pickle.dump(self.scaler, f)
         except Exception as e:
             print(f"モデルの保存に失敗しました: {e}")
@@ -84,6 +84,7 @@ class RacePredictionModel:
             # データベースから過去のレースエントリを取得
             # ここではクエリを直接実行（キャッシュをバイパス）
             import db
+
             conn = db.get_connection()
             cursor = conn.cursor()
 
@@ -186,42 +187,44 @@ class RacePredictionModel:
                 predicted_class = self.model.predict(vector_scaled)[0]
 
                 # 着順の説明
-                class_names = ['1着の可能性', '2-3着の可能性', 'その他']
+                class_names = ["1着の可能性", "2-3着の可能性", "その他"]
                 win_prob = float(probabilities[0]) * 100
                 place_prob = float(probabilities[1]) * 100
                 other_prob = float(probabilities[2]) * 100
 
-                results.append({
-                    'horse_id': horse_id,
-                    'horse_name': horse_details.get('raw_name', '不明'),
-                    'predicted_class': int(predicted_class),
-                    'win_probability': win_prob,
-                    'place_probability': place_prob,
-                    'other_probability': other_prob,
-                    'confidence': float(max(probabilities)) * 100,
-                })
+                results.append(
+                    {
+                        "horse_id": horse_id,
+                        "horse_name": horse_details.get("raw_name", "不明"),
+                        "predicted_class": int(predicted_class),
+                        "win_probability": win_prob,
+                        "place_probability": place_prob,
+                        "other_probability": other_prob,
+                        "confidence": float(max(probabilities)) * 100,
+                    }
+                )
 
             except Exception as e:
                 print(f"予測エラー (horse_id={horse_id}): {e}")
                 continue
 
         # 信頼度で降順ソート
-        results.sort(key=lambda x: x['confidence'], reverse=True)
+        results.sort(key=lambda x: x["confidence"], reverse=True)
 
         return {
-            'predictions': results,
-            'model_status': 'trained',
-            'total_horses': len(results),
+            "predictions": results,
+            "model_status": "trained",
+            "total_horses": len(results),
         }
 
     def get_model_info(self) -> Dict:
         """モデルの情報を取得"""
         return {
-            'is_trained': self.is_trained,
-            'model_type': 'Random Forest Classifier',
-            'n_estimators': self.model.n_estimators,
-            'feature_names': self.feature_names,
-            'n_features': len(self.feature_names),
+            "is_trained": self.is_trained,
+            "model_type": "Random Forest Classifier",
+            "n_estimators": self.model.n_estimators,
+            "feature_names": self.feature_names,
+            "n_features": len(self.feature_names),
         }
 
 

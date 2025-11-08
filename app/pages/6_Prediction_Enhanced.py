@@ -69,18 +69,16 @@ st.markdown("---")
 # ========================
 
 from app.sidebar_utils import render_sidebar
+
 render_sidebar()
 
 # ========================
 # Tab 1: バックテスト
 # ========================
 
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 バックテスト",
-    "🚀 モデル訓練",
-    "🎯 将来レース予測",
-    "💰 馬券配分推奨"
-])
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["📊 バックテスト", "🚀 モデル訓練", "🎯 将来レース予測", "💰 馬券配分推奨"]
+)
 
 with tab1:
     st.subheader("📊 過去レースでモデルを検証")
@@ -89,17 +87,11 @@ with tab1:
 
     with col1:
         start_date = st.date_input(
-            "開始日",
-            value=datetime.now().date() - timedelta(days=90),
-            help="バックテスト開始日"
+            "開始日", value=datetime.now().date() - timedelta(days=90), help="バックテスト開始日"
         )
 
     with col2:
-        end_date = st.date_input(
-            "終了日",
-            value=datetime.now().date(),
-            help="バックテスト終了日"
-        )
+        end_date = st.date_input("終了日", value=datetime.now().date(), help="バックテスト終了日")
 
     if st.button("🔍 バックテストを実行", type="primary", use_container_width=True):
         with st.status("バックテスト実行中...", expanded=True) as status:
@@ -115,10 +107,7 @@ with tab1:
 
                 # バックテスト実行
                 runner = bt.BacktestRunner(model)
-                results = runner.run_backtest(
-                    start_date=str(start_date),
-                    end_date=str(end_date)
-                )
+                results = runner.run_backtest(start_date=str(start_date), end_date=str(end_date))
 
                 status.update(label="✅ 完了", state="complete")
 
@@ -128,35 +117,22 @@ with tab1:
                 col1, col2, col3, col4 = st.columns(4)
 
                 with col1:
-                    st.metric(
-                        "総レース数",
-                        results.get('total_races', 0)
-                    )
+                    st.metric("総レース数", results.get("total_races", 0))
 
                 with col2:
-                    st.metric(
-                        "1着予測 的中率",
-                        f"{results.get('win_accuracy', 0):.1%}"
-                    )
+                    st.metric("1着予測 的中率", f"{results.get('win_accuracy', 0):.1%}")
 
                 with col3:
-                    st.metric(
-                        "2-3着予測 的中率",
-                        f"{results.get('place_accuracy', 0):.1%}"
-                    )
+                    st.metric("2-3着予測 的中率", f"{results.get('place_accuracy', 0):.1%}")
 
                 with col4:
-                    st.metric(
-                        "総予測数",
-                        results.get('total_predictions', 0)
-                    )
+                    st.metric("総予測数", results.get("total_predictions", 0))
 
                 # 詳細結果
-                if results.get('race_details'):
+                if results.get("race_details"):
                     with st.expander("詳細結果を表示", expanded=False):
                         st.dataframe(
-                            pd.DataFrame(results['race_details']),
-                            use_container_width=True
+                            pd.DataFrame(results["race_details"]), use_container_width=True
                         )
 
             except Exception as e:
@@ -176,7 +152,7 @@ with tab2:
         model_choice = st.radio(
             "モデル選択",
             options=["LightGBM（推奨）", "ランダムフォレスト"],
-            help="LightGBMが推奨（精度が高い）"
+            help="LightGBMが推奨（精度が高い）",
         )
 
     with col2:
@@ -186,7 +162,7 @@ with tab2:
             min_value=30,
             max_value=365,
             value=90,
-            help="過去N日間のデータで訓練"
+            help="過去N日間のデータで訓練",
         )
 
     if st.button("📚 モデルを訓練", type="primary", use_container_width=True):
@@ -197,6 +173,7 @@ with tab2:
                     model = pml.AdvancedRacePredictionModel()
                 else:
                     from app import prediction_model as pm
+
                     model = pm.RacePredictionModel()
 
                 st.write(f"📊 過去 {train_days} 日間のデータで訓練を開始...")
@@ -224,25 +201,19 @@ with tab2:
                     st.metric(
                         "平均精度",
                         f"{results.get('mean_cv_accuracy', 0):.2%}",
-                        delta=f"±{results.get('std_cv_accuracy', 0):.2%}"
+                        delta=f"±{results.get('std_cv_accuracy', 0):.2%}",
                     )
 
                 with col2:
-                    st.metric(
-                        "平均 F1 スコア",
-                        f"{results.get('mean_cv_f1', 0):.4f}"
-                    )
+                    st.metric("平均 F1 スコア", f"{results.get('mean_cv_f1', 0):.4f}")
 
                 with col3:
-                    st.metric(
-                        "モデル",
-                        model_choice.split("（")[0]
-                    )
+                    st.metric("モデル", model_choice.split("（")[0])
 
                 # Fold詳細
-                if results.get('fold_info'):
+                if results.get("fold_info"):
                     with st.expander("Fold別詳細を表示", expanded=False):
-                        fold_df = pd.DataFrame(results['fold_info'])
+                        fold_df = pd.DataFrame(results["fold_info"])
                         st.dataframe(fold_df, use_container_width=True)
 
                 st.success("✨ モデルが正常に訓練されました")
@@ -281,24 +252,21 @@ with tab3:
                             races = queries.get_races(date, course)
                             if races:
                                 for race in races:
-                                    future_races_list.append((
-                                        race["race_id"],
-                                        date,
-                                        course,
-                                        race["race_no"],
-                                        race.get("title", "無題")
-                                    ))
+                                    future_races_list.append(
+                                        (
+                                            race["race_id"],
+                                            date,
+                                            course,
+                                            race["race_no"],
+                                            race.get("title", "無題"),
+                                        )
+                                    )
 
             if future_races_list:
-                race_options = {
-                    f"{r[1]} - {r[2]} {r[3]}R {r[4]}": r[0]
-                    for r in future_races_list
-                }
+                race_options = {f"{r[1]} - {r[2]} {r[3]}R {r[4]}": r[0] for r in future_races_list}
 
                 selected_race_display = st.selectbox(
-                    "レースを選択",
-                    options=race_options.keys(),
-                    help="予測対象のレースを選択"
+                    "レースを選択", options=race_options.keys(), help="予測対象のレースを選択"
                 )
 
                 if selected_race_display:
@@ -329,8 +297,8 @@ with tab3:
                                     try:
                                         pred = model.predict(
                                             race_id=race_id,
-                                            horse_id=entry.get('horse_id'),
-                                            entry_info=entry
+                                            horse_id=entry.get("horse_id"),
+                                            entry_info=entry,
                                         )
                                         predictions.append(pred)
                                     except Exception as e:
@@ -342,15 +310,17 @@ with tab3:
                                 st.subheader("📈 予測結果")
 
                                 # 予測結果をDataFrameに
-                                pred_df = pd.DataFrame([
-                                    {
-                                        "馬名": p.get('horse_name'),
-                                        "1着確率": f"{p.get('win_prob', 0):.1%}",
-                                        "2-3着確率": f"{p.get('place_prob', 0):.1%}",
-                                        "その他確率": f"{p.get('other_prob', 0):.1%}",
-                                    }
-                                    for p in predictions
-                                ])
+                                pred_df = pd.DataFrame(
+                                    [
+                                        {
+                                            "馬名": p.get("horse_name"),
+                                            "1着確率": f"{p.get('win_prob', 0):.1%}",
+                                            "2-3着確率": f"{p.get('place_prob', 0):.1%}",
+                                            "その他確率": f"{p.get('other_prob', 0):.1%}",
+                                        }
+                                        for p in predictions
+                                    ]
+                                )
 
                                 st.dataframe(pred_df, use_container_width=True)
 
@@ -387,7 +357,7 @@ with tab4:
     )
 
     # 予測がない場合
-    if 'latest_predictions' not in st.session_state:
+    if "latest_predictions" not in st.session_state:
         st.warning("⚠️ 先に「将来レース予測」タブで予測を実行してください")
         st.stop()
 
@@ -430,9 +400,9 @@ with tab4:
                 # 予測データをフォーマット
                 pred_data = [
                     {
-                        'horse_name': p.get('horse_name'),
-                        'win_probability': p.get('win_prob', 0),
-                        'expected_odds': 3.0,  # デフォルト（実際はオッズを使用）
+                        "horse_name": p.get("horse_name"),
+                        "win_probability": p.get("win_prob", 0),
+                        "expected_odds": 3.0,  # デフォルト（実際はオッズを使用）
                     }
                     for p in predictions
                 ]
@@ -452,14 +422,16 @@ with tab4:
                     # 推奨表を作成
                     rec_data = []
                     for rec in recommendations[:5]:  # 上位5つ
-                        rec_data.append({
-                            "馬名": rec.horse_name,
-                            "勝つ確率": f"{rec.win_probability:.1%}",
-                            "配分割合": f"{rec.kelly_fraction:.1%}",
-                            "推奨賭金": f"{rec.kelly_bet:.0f}円",
-                            "期待ROI": f"{rec.expected_roi:.2f}%",
-                            "期待利益": f"{rec.expected_profit:.0f}円",
-                        })
+                        rec_data.append(
+                            {
+                                "馬名": rec.horse_name,
+                                "勝つ確率": f"{rec.win_probability:.1%}",
+                                "配分割合": f"{rec.kelly_fraction:.1%}",
+                                "推奨賭金": f"{rec.kelly_bet:.0f}円",
+                                "期待ROI": f"{rec.expected_roi:.2f}%",
+                                "期待利益": f"{rec.expected_profit:.0f}円",
+                            }
+                        )
 
                     rec_df = pd.DataFrame(rec_data)
                     st.dataframe(rec_df, use_container_width=True)
@@ -469,21 +441,15 @@ with tab4:
 
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric(
-                            "総投資額",
-                            f"{stats.get('total_bet', 0):,.0f}円"
-                        )
+                        st.metric("総投資額", f"{stats.get('total_bet', 0):,.0f}円")
                     with col2:
                         st.metric(
                             "期待利益",
                             f"{stats.get('expected_total_profit', 0):,.0f}円",
-                            delta=f"{stats.get('expected_total_roi', 0):.2f}%"
+                            delta=f"{stats.get('expected_total_roi', 0):.2f}%",
                         )
                     with col3:
-                        st.metric(
-                            "対象馬数",
-                            stats.get('num_bets', 0)
-                        )
+                        st.metric("対象馬数", stats.get("num_bets", 0))
 
                     st.markdown("---")
 

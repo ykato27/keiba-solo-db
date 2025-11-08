@@ -124,9 +124,9 @@ def fetch_race_card_for_future(race_id: str) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"出馬表取得エラー (race_id={race_id}): {e}")
         return {
-            'race_id': race_id,
-            'entries': [],
-            'error': str(e),
+            "race_id": race_id,
+            "entries": [],
+            "error": str(e),
         }
 
 
@@ -207,8 +207,8 @@ def _parse_upcoming_races(html: str, days_ahead: int = 14) -> List[Dict[str, Any
                 race_id = None
                 race_id_patterns = [
                     r"/keiba/race/(\d{12})/",  # 標準: /keiba/race/202501010101/
-                    r"race_id[=?](\d{12})",     # 代替: race_id=202501010101 or race_id?202501010101
-                    r"/(\d{12})[/?]",           # 広いパターン: /202501010101/
+                    r"race_id[=?](\d{12})",  # 代替: race_id=202501010101 or race_id?202501010101
+                    r"/(\d{12})[/?]",  # 広いパターン: /202501010101/
                 ]
 
                 for pattern in race_id_patterns:
@@ -240,13 +240,15 @@ def _parse_upcoming_races(html: str, days_ahead: int = 14) -> List[Dict[str, Any
                 # コース情報はリンクテキストから抽出
                 title = link.get_text(strip=True)
 
-                races.append({
-                    'race_id': race_id,
-                    'race_date': str(race_date),
-                    'title': title,
-                    'url': href,
-                    'days_from_today': days_from_today,
-                })
+                races.append(
+                    {
+                        "race_id": race_id,
+                        "race_date": str(race_date),
+                        "title": title,
+                        "url": href,
+                        "days_from_today": days_from_today,
+                    }
+                )
 
             except Exception as e:
                 logger.warning(f"レース情報パース失敗: {e}")
@@ -271,9 +273,9 @@ def _parse_future_race_card(html: str, race_id: str) -> Dict[str, Any]:
         レース情報と出走馬リスト
     """
     race_info = {
-        'race_id': race_id,
-        'entries': [],
-        'parsed_at': datetime.now().isoformat(),
+        "race_id": race_id,
+        "entries": [],
+        "parsed_at": datetime.now().isoformat(),
     }
 
     try:
@@ -296,7 +298,7 @@ def _parse_future_race_card(html: str, race_id: str) -> Dict[str, Any]:
                 try:
                     entry = _parse_entry_row(cells)
                     if entry:
-                        race_info['entries'].append(entry)
+                        race_info["entries"].append(entry)
                 except Exception as e:
                     logger.warning(f"エントリ行パース失敗: {e}")
                     continue
@@ -324,34 +326,34 @@ def _parse_entry_row(cells: List) -> Optional[Dict[str, Any]]:
 
         # セル数に応じて柔軟にパース
         if len(cells) >= 1:
-            entry['frame_no'] = _safe_int(cells[0].text)
+            entry["frame_no"] = _safe_int(cells[0].text)
 
         if len(cells) >= 2:
-            entry['horse_no'] = _safe_int(cells[1].text)
+            entry["horse_no"] = _safe_int(cells[1].text)
 
         if len(cells) >= 3:
-            entry['horse_name'] = cells[2].text.strip()
+            entry["horse_name"] = cells[2].text.strip()
 
         if len(cells) >= 4:
-            entry['jockey_name'] = cells[3].text.strip()
+            entry["jockey_name"] = cells[3].text.strip()
 
         if len(cells) >= 5:
-            entry['trainer_name'] = cells[4].text.strip()
+            entry["trainer_name"] = cells[4].text.strip()
 
         if len(cells) >= 6:
-            entry['age'] = _safe_int(cells[5].text)
+            entry["age"] = _safe_int(cells[5].text)
 
         if len(cells) >= 7:
-            entry['weight_carried'] = _safe_float(cells[6].text)
+            entry["weight_carried"] = _safe_float(cells[6].text)
 
         if len(cells) >= 8:
-            entry['odds'] = _safe_float(cells[7].text)
+            entry["odds"] = _safe_float(cells[7].text)
 
         if len(cells) >= 9:
-            entry['popularity'] = _safe_int(cells[8].text)
+            entry["popularity"] = _safe_int(cells[8].text)
 
         # 必須フィールドをチェック
-        if entry.get('horse_name') and entry.get('frame_no') is not None:
+        if entry.get("horse_name") and entry.get("frame_no") is not None:
             return entry
         else:
             return None
@@ -422,17 +424,19 @@ def _generate_mock_races(days_ahead: int = 14) -> List[Dict[str, Any]]:
                     f"{race_no:04d}"
                 )
 
-                mock_races.append({
-                    'race_id': race_id,
-                    'race_date': str(race_date),
-                    'course': course,
-                    'race_no': race_no,
-                    'distance_m': random.choice(distances),
-                    'surface': random.choice(surfaces),
-                    'title': f"{course}{race_no}R",
-                    'days_from_today': days_offset,
-                    'is_mock': True,  # モックデータであることを明示
-                })
+                mock_races.append(
+                    {
+                        "race_id": race_id,
+                        "race_date": str(race_date),
+                        "course": course,
+                        "race_no": race_no,
+                        "distance_m": random.choice(distances),
+                        "surface": random.choice(surfaces),
+                        "title": f"{course}{race_no}R",
+                        "days_from_today": days_offset,
+                        "is_mock": True,  # モックデータであることを明示
+                    }
+                )
 
     logger.info(f"モックレースデータを生成: {len(mock_races)} 件")
     return mock_races

@@ -1,0 +1,24 @@
+[flake8]
+max-line-length = 100
+extend-ignore = E203, W503, E501, E701, E704
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    build,
+    dist,
+    .eggs,
+    *.egg-info,
+    .pytest_cache,
+    .mypy_cache
+
+# Per-file ignores
+per-file-ignores =
+    # Streamlit pages can have multiple statements per line
+    app/pages/*.py:E701
+    # Test files can use assertions
+    test_*.py:E501
+
+# Complexity settings
+max-complexity = 10

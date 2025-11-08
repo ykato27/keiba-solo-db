@@ -205,16 +205,62 @@ pip install -r requirements.txt --upgrade
 
 ## 開発ガイド
 
+### セットアップ
+
+```bash
+# 開発用依存関係をインストール
+pip install -r requirements.txt
+
+# 開発ツールをセットアップ
+pip install mypy black flake8 pytest pytest-cov
+```
+
+### コード品質管理
+
+#### ✅ コード整形・チェック実行
+
+**Windows:**
+```bash
+lint.bat
+```
+
+**macOS/Linux:**
+```bash
+bash lint.sh
+```
+
+**個別実行:**
+```bash
+# Black: コード自動整形
+black app etl scraper metrics --line-length 100
+
+# Flake8: スタイルチェック
+flake8 app etl scraper metrics --max-line-length 100
+
+# mypy: 型チェック
+mypy app etl scraper metrics --ignore-missing-imports
+```
+
+#### 📋 設定ファイル
+
+- `pyproject.toml` - Black, isort, pytest設定
+- `mypy.ini` - mypy詳細設定
+- `.flake8` - Flake8詳細設定
+
 ### 新機能を追加する
 
-1. **新しいクエリ**: `app/lib/queries.py` に追加
-2. **新しいグラフ**: `app/lib/charts.py` に追加
+1. **新しいクエリ**: `app/queries.py` に追加（DB層）
+2. **新しいグラフ**: `app/charts.py` に追加
 3. **新しいページ**: `app/pages/` に新規ファイルを作成
 4. **スクレイパー変更**: `scraper/selectors.py` でセレクタを集約管理
+5. **型ヒント追加**: TypedDict で戻り値を定義
 
 ### テストと確認
 
 ```bash
+# コード品質チェック
+lint.bat  # または bash lint.sh
+
 # ローカルでワークフローをシミュレート
 python -m etl.upsert_master
 python -m etl.upsert_race
@@ -224,6 +270,13 @@ python -m metrics.build_horse_metrics
 # Streamlitで動作確認
 streamlit run app/Home.py
 ```
+
+### コード品質基準
+
+- **行長**: 100文字以下（black/flake8）
+- **型チェック**: mypy で critical エラーなし
+- **スタイル**: PEP 8 準拠（flake8）
+- **複雑度**: max-complexity = 10 以下
 
 ## ライセンス
 

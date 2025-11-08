@@ -62,7 +62,7 @@ st.markdown("---")
 
 st.subheader("⚙️ スクレイピング設定")
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     days_ahead = st.slider(
@@ -76,6 +76,15 @@ with col1:
 with col2:
     st.info(f"取得範囲: 今日 ～ {(datetime.now() + timedelta(days=days_ahead)).strftime('%Y年%m月%d日')}")
 
+with col3:
+    use_mock = st.checkbox(
+        "テストモードを使用",
+        value=False,
+        help="JRA公式サイトへのアクセスが失敗する場合、モックデータでテストできます"
+    )
+    if use_mock:
+        st.warning("⚠️ テストモード：本番データではなくモックデータを使用します")
+
 st.markdown("---")
 
 # ========================
@@ -87,10 +96,16 @@ st.subheader("🔄 スクレイピング実行")
 if st.button("📥 将来レース情報を取得", type="primary", use_container_width=True):
     with st.status("将来レース情報を取得中...", expanded=True) as status:
         try:
-            st.write(f"📊 JRA公式サイトから {days_ahead} 日先までのレース情報を取得中...")
+            if use_mock:
+                st.write(f"📊 テストモード：{days_ahead} 日先までのモックレース情報を生成中...")
+            else:
+                st.write(f"📊 JRA公式サイトから {days_ahead} 日先までのレース情報を取得中...")
 
-            # スクレイピング実行
-            upcoming_races = fetch_future_races.fetch_upcoming_races(days_ahead=days_ahead)
+            # スクレイピング実行（モード選択）
+            upcoming_races = fetch_future_races.fetch_upcoming_races(
+                days_ahead=days_ahead,
+                use_mock=use_mock
+            )
 
             if not upcoming_races:
                 st.error("❌ レース情報が取得できませんでした")
@@ -99,6 +114,7 @@ if st.button("📥 将来レース情報を取得", type="primary", use_containe
                 st.info("  - ネットワーク接続エラー")
                 st.info("  - スクレイピング対象期間にレースがない")
                 st.info("💡 詳細はサーバーログを確認してください")
+                st.info("💡 テストモードをONにしてモックデータで試してください")
                 st.stop()
 
             st.write(f"✅ {len(upcoming_races)} 件のレース情報を取得しました")

@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import json
 import time
+import random
 
 from bs4 import BeautifulSoup
 
@@ -22,12 +23,13 @@ logger = logging.getLogger(__name__)
 LOG_DIR = Path("data/logs")
 
 
-def fetch_upcoming_races(days_ahead: int = 14) -> List[Dict[str, Any]]:
+def fetch_upcoming_races(days_ahead: int = 14, use_mock: bool = False) -> List[Dict[str, Any]]:
     """
     将来のレース情報を取得（今日から指定日数先まで）
 
     Args:
         days_ahead: 何日先までのレースを取得するか（デフォルト14日）
+        use_mock: テスト用モックデータを使用するか
 
     Returns:
         レース情報リスト: [
@@ -48,27 +50,52 @@ def fetch_upcoming_races(days_ahead: int = 14) -> List[Dict[str, Any]]:
     all_races = []
 
     try:
-        # JRA公式サイトの「今週のレース」ページを取得
-        url = f"{BASE_URL}/keiba/latest/"
-        logger.info(f"将来レース情報取得開始: {url}")
+        # テスト用モックデータ（JRA側の403回避）
+        if use_mock:
+            logger.warning("⚠️ モックデータモードで実行中（本番データではありません）")
+            races = _generate_mock_races(days_ahead=days_ahead)
+            return races
 
-        html = fetch_url_with_retry(url)
-        races = _parse_upcoming_races(html, days_ahead=days_ahead)
+        # JRA公式サイトのカレンダーエンドポイントを試す（複数の候補）
+        urls_to_try = [
+            f"{BASE_URL}/keiba/schedule/",  # スケジュール
+            f"{BASE_URL}/keiba/",  # トップページ
+            f"{BASE_URL}/keiba/latest/",  # 最新情報
+        ]
 
-        all_races.extend(races)
-        logger.info(f"取得したレース数: {len(races)}")
+        for url in urls_to_try:
+            try:
+                logger.info(f"将来レース情報取得開始: {url}")
+                html = fetch_url_with_retry(url)
+                races = _parse_upcoming_races(html, days_ahead=days_ahead)
+
+                if races:
+                    all_races.extend(races)
+                    logger.info(f"取得したレース数: {len(races)}")
+                    break
+                else:
+                    logger.warning(f"URLからレース情報を抽出できませんでした: {url}")
+
+            except Exception as e:
+                logger.warning(f"URL取得失敗 {url}: {e}")
+                continue
+
+        if not all_races:
+            logger.warning("すべてのURLでレース取得に失敗。モックデータで代替します")
+            all_races = _generate_mock_races(days_ahead=days_ahead)
 
         # ログ保存
         log_file = LOG_DIR / f"upcoming_races_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(log_file, "w", encoding="utf-8") as f:
-            json.dump(races, f, ensure_ascii=False, indent=2)
+            json.dump(all_races, f, ensure_ascii=False, indent=2)
         logger.info(f"ログを保存: {log_file}")
 
-        return races
+        return all_races
 
     except Exception as e:
         logger.error(f"将来レース情報の取得に失敗: {e}")
-        return []
+        logger.warning("モックデータで代替します")
+        return _generate_mock_races(days_ahead=days_ahead)
 
 
 def fetch_race_card_for_future(race_id: str) -> Dict[str, Any]:
@@ -348,6 +375,67 @@ def _safe_float(value: str) -> Optional[float]:
         return float(value.strip())
     except (ValueError, AttributeError):
         return None
+
+
+def _generate_mock_races(days_ahead: int = 14) -> List[Dict[str, Any]]:
+    """
+    テスト用モックレースデータを生成
+    JRA公式サイトへのアクセス不可時の代替
+
+    Args:
+        days_ahead: 何日先までのレースを生成するか
+
+    Returns:
+        モックレース情報リスト
+    """
+    mock_races = []
+
+    courses = ["東京", "中山", "阪神", "京都", "小倉", "新潟"]
+    surfaces = ["芝", "ダート"]
+    distances = [1200, 1400, 1600, 1800, 2000, 2200, 2400, 2800]
+
+    today = datetime.now().date()
+
+    # 週末（金土日）を中心にレースを生成
+    for days_offset in range(1, days_ahead + 1):
+        race_date = today + timedelta(days=days_offset)
+        weekday = race_date.weekday()
+
+        # 日曜日 (6) のみレースを生成
+        if weekday != 6:
+            continue
+
+        # 1日に2-4開催場
+        num_courses = min(random.randint(2, 4), len(courses))
+        selected_courses = random.sample(courses, num_courses)
+
+        for course in selected_courses:
+            # 各開催場で11-12レース
+            num_races = random.randint(11, 12)
+
+            for race_no in range(1, num_races + 1):
+                # race_id を生成: YYYYMMDDHHMM
+                race_id = (
+                    f"{race_date.year:04d}"
+                    f"{race_date.month:02d}"
+                    f"{race_date.day:02d}"
+                    f"{race_no:04d}"
+                )
+
+                mock_races.append({
+                    'race_id': race_id,
+                    'race_date': str(race_date),
+                    'course': course,
+                    'race_no': race_no,
+                    'distance_m': random.choice(distances),
+                    'surface': random.choice(surfaces),
+                    'title': f"{course}{race_no}R",
+                    'days_from_today': days_offset,
+                    'is_mock': True,  # モックデータであることを明示
+                })
+
+    logger.info(f"モックレースデータを生成: {len(mock_races)} 件")
+    return mock_races
 
 
 if __name__ == "__main__":

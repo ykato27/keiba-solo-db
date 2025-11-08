@@ -74,14 +74,13 @@ def export_all_races_to_csv(start_date: str = None, end_date: str = None) -> str
         """
         cursor.execute(query)
 
+    # カラム名を取得（fetchする前に）
+    columns = [description[0] for description in cursor.description]
     races = cursor.fetchall()
     conn.close()
 
     if not races:
         return ""
-
-    # カラム名を取得
-    columns = [description[0] for description in cursor.description]
 
     # DataFrameに変換
     df = pd.DataFrame([dict(zip(columns, race)) for race in races])
@@ -299,138 +298,147 @@ def export_entry_details_to_csv(race_id: int = None, start_date: str = None, end
     Returns:
         CSV文字列
     """
-    from app import db
+    try:
+        from app import db
 
-    conn = db.get_connection()
-    cursor = conn.cursor()
+        conn = db.get_connection()
+        cursor = conn.cursor()
 
-    if race_id:
-        query = """
-            SELECT
-                e.entry_id,
-                e.race_id,
-                r.race_date,
-                r.course,
-                r.race_no,
-                r.distance_m,
-                r.surface,
-                r.going,
-                r.grade,
-                h.raw_name as horse_name,
-                j.raw_name as jockey_name,
-                t.raw_name as trainer_name,
-                e.frame_no,
-                e.horse_no,
-                e.age,
-                e.weight_carried,
-                e.horse_weight,
-                e.days_since_last_race,
-                e.is_steeplechase,
-                e.odds,
-                e.popularity,
-                e.finish_pos,
-                e.finish_time_seconds,
-                e.margin,
-                e.corner_order,
-                e.remark
-            FROM race_entries e
-            JOIN races r ON e.race_id = r.race_id
-            LEFT JOIN horses h ON e.horse_id = h.horse_id
-            LEFT JOIN jockeys j ON e.jockey_id = j.jockey_id
-            LEFT JOIN trainers t ON e.trainer_id = t.trainer_id
-            WHERE e.race_id = ?
-            ORDER BY e.horse_no
-        """
-        cursor.execute(query, (race_id,))
-    elif start_date and end_date:
-        query = """
-            SELECT
-                e.entry_id,
-                e.race_id,
-                r.race_date,
-                r.course,
-                r.race_no,
-                r.distance_m,
-                r.surface,
-                r.going,
-                r.grade,
-                h.raw_name as horse_name,
-                j.raw_name as jockey_name,
-                t.raw_name as trainer_name,
-                e.frame_no,
-                e.horse_no,
-                e.age,
-                e.weight_carried,
-                e.horse_weight,
-                e.days_since_last_race,
-                e.is_steeplechase,
-                e.odds,
-                e.popularity,
-                e.finish_pos,
-                e.finish_time_seconds,
-                e.margin,
-                e.corner_order,
-                e.remark
-            FROM race_entries e
-            JOIN races r ON e.race_id = r.race_id
-            LEFT JOIN horses h ON e.horse_id = h.horse_id
-            LEFT JOIN jockeys j ON e.jockey_id = j.jockey_id
-            LEFT JOIN trainers t ON e.trainer_id = t.trainer_id
-            WHERE r.race_date BETWEEN ? AND ?
-            ORDER BY r.race_date DESC, r.course, r.race_no, e.horse_no
-        """
-        cursor.execute(query, (start_date, end_date))
-    else:
-        query = """
-            SELECT
-                e.entry_id,
-                e.race_id,
-                r.race_date,
-                r.course,
-                r.race_no,
-                r.distance_m,
-                r.surface,
-                r.going,
-                r.grade,
-                h.raw_name as horse_name,
-                j.raw_name as jockey_name,
-                t.raw_name as trainer_name,
-                e.frame_no,
-                e.horse_no,
-                e.age,
-                e.weight_carried,
-                e.horse_weight,
-                e.days_since_last_race,
-                e.is_steeplechase,
-                e.odds,
-                e.popularity,
-                e.finish_pos,
-                e.finish_time_seconds,
-                e.margin,
-                e.corner_order,
-                e.remark
-            FROM race_entries e
-            JOIN races r ON e.race_id = r.race_id
-            LEFT JOIN horses h ON e.horse_id = h.horse_id
-            LEFT JOIN jockeys j ON e.jockey_id = j.jockey_id
-            LEFT JOIN trainers t ON e.trainer_id = t.trainer_id
-            ORDER BY r.race_date DESC, r.course, r.race_no, e.horse_no
-            LIMIT 10000
-        """
-        cursor.execute(query)
+        if race_id:
+            query = """
+                SELECT
+                    e.entry_id,
+                    e.race_id,
+                    r.race_date,
+                    r.course,
+                    r.race_no,
+                    r.distance_m,
+                    r.surface,
+                    r.going,
+                    r.grade,
+                    h.raw_name as horse_name,
+                    j.raw_name as jockey_name,
+                    t.raw_name as trainer_name,
+                    e.frame_no,
+                    e.horse_no,
+                    e.age,
+                    e.weight_carried,
+                    e.horse_weight,
+                    e.days_since_last_race,
+                    e.is_steeplechase,
+                    e.odds,
+                    e.popularity,
+                    e.finish_pos,
+                    e.finish_time_seconds,
+                    e.margin,
+                    e.corner_order,
+                    e.remark
+                FROM race_entries e
+                JOIN races r ON e.race_id = r.race_id
+                LEFT JOIN horses h ON e.horse_id = h.horse_id
+                LEFT JOIN jockeys j ON e.jockey_id = j.jockey_id
+                LEFT JOIN trainers t ON e.trainer_id = t.trainer_id
+                WHERE e.race_id = ?
+                ORDER BY e.horse_no
+            """
+            cursor.execute(query, (race_id,))
+        elif start_date and end_date:
+            query = """
+                SELECT
+                    e.entry_id,
+                    e.race_id,
+                    r.race_date,
+                    r.course,
+                    r.race_no,
+                    r.distance_m,
+                    r.surface,
+                    r.going,
+                    r.grade,
+                    h.raw_name as horse_name,
+                    j.raw_name as jockey_name,
+                    t.raw_name as trainer_name,
+                    e.frame_no,
+                    e.horse_no,
+                    e.age,
+                    e.weight_carried,
+                    e.horse_weight,
+                    e.days_since_last_race,
+                    e.is_steeplechase,
+                    e.odds,
+                    e.popularity,
+                    e.finish_pos,
+                    e.finish_time_seconds,
+                    e.margin,
+                    e.corner_order,
+                    e.remark
+                FROM race_entries e
+                JOIN races r ON e.race_id = r.race_id
+                LEFT JOIN horses h ON e.horse_id = h.horse_id
+                LEFT JOIN jockeys j ON e.jockey_id = j.jockey_id
+                LEFT JOIN trainers t ON e.trainer_id = t.trainer_id
+                WHERE r.race_date BETWEEN ? AND ?
+                ORDER BY r.race_date DESC, r.course, r.race_no, e.horse_no
+                LIMIT 10000
+            """
+            cursor.execute(query, (start_date, end_date))
+        else:
+            query = """
+                SELECT
+                    e.entry_id,
+                    e.race_id,
+                    r.race_date,
+                    r.course,
+                    r.race_no,
+                    r.distance_m,
+                    r.surface,
+                    r.going,
+                    r.grade,
+                    h.raw_name as horse_name,
+                    j.raw_name as jockey_name,
+                    t.raw_name as trainer_name,
+                    e.frame_no,
+                    e.horse_no,
+                    e.age,
+                    e.weight_carried,
+                    e.horse_weight,
+                    e.days_since_last_race,
+                    e.is_steeplechase,
+                    e.odds,
+                    e.popularity,
+                    e.finish_pos,
+                    e.finish_time_seconds,
+                    e.margin,
+                    e.corner_order,
+                    e.remark
+                FROM race_entries e
+                JOIN races r ON e.race_id = r.race_id
+                LEFT JOIN horses h ON e.horse_id = h.horse_id
+                LEFT JOIN jockeys j ON e.jockey_id = j.jockey_id
+                LEFT JOIN trainers t ON e.trainer_id = t.trainer_id
+                ORDER BY r.race_date DESC, r.course, r.race_no, e.horse_no
+                LIMIT 10000
+            """
+            cursor.execute(query)
 
-    entries = cursor.fetchall()
-    columns = [description[0] for description in cursor.description]
-    conn.close()
+        # カラム名をfetchする前に取得
+        columns = [description[0] for description in cursor.description]
+        entries = cursor.fetchall()
+        conn.close()
 
-    if not entries:
+        if not entries:
+            return ""
+
+        # DataFrameに変換
+        df = pd.DataFrame([dict(zip(columns, entry)) for entry in entries])
+
+        # CSV形式に変換
+        csv_buffer = io.StringIO()
+        df.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
+
+        return csv_buffer.getvalue()
+
+    except Exception as e:
+        print(f"Error in export_entry_details_to_csv: {e}")
+        import traceback
+        traceback.print_exc()
         return ""
-
-    # DataFrameに変換
-    df = pd.DataFrame([dict(zip(columns, entry)) for entry in entries])
-
-    # CSV形式に変換
-    csv_buffer = io.StringIO()
-    df.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
-
-    return csv_buffer.getvalue()

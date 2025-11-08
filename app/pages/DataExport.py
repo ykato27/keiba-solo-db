@@ -192,20 +192,24 @@ elif "2. 出走馬情報（詳細）" in export_type:
                                 st.warning("データが見つかりません")
 
     else:  # 全データ
+        st.warning("⚠️ 全データエクスポートは大量データを処理するため時間がかかります（最大10,000件）")
         if st.button("全出走馬情報をCSVでダウンロード", type="primary", use_container_width=True):
-            with st.spinner("出走馬情報を取得中..."):
-                csv_data = csv_export.export_entry_details_to_csv()
+            with st.spinner("出走馬情報を取得中... (この処理には時間がかかります)"):
+                try:
+                    csv_data = csv_export.export_entry_details_to_csv()
 
-                if csv_data:
-                    st.download_button(
-                        label="📥 all_entries.csv をダウンロード",
-                        data=csv_data,
-                        file_name=f"all_entries_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                        mime="text/csv",
-                    )
-                    st.success(f"✓ 出走馬情報を取得しました")
-                else:
-                    st.warning("データが見つかりません")
+                    if csv_data:
+                        st.download_button(
+                            label="📥 all_entries.csv をダウンロード",
+                            data=csv_data,
+                            file_name=f"all_entries_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                            mime="text/csv",
+                        )
+                        st.success(f"✓ 出走馬情報を取得しました")
+                    else:
+                        st.warning("データが見つかりません")
+                except Exception as e:
+                    st.error(f"エクスポートエラー: {e}")
 
 # ========================
 # 3. 馬のメトリクス

@@ -63,6 +63,25 @@ if not db.verify_schema():
 st.sidebar.title("🐴 競馬データベース")
 st.sidebar.markdown("---")
 
+# ナビゲーションメニュー
+st.sidebar.subheader("📋 メニュー")
+
+col1, col2, col3 = st.sidebar.columns(3)
+
+with col1:
+    if st.button("🏇 競馬データ", use_container_width=True):
+        st.switch_page("Home.py")
+
+with col2:
+    if st.button("🔮 予測", use_container_width=True):
+        st.switch_page("pages/Prediction.py")
+
+with col3:
+    if st.button("📊 エクスポート", use_container_width=True):
+        st.switch_page("pages/DataExport.py")
+
+st.sidebar.markdown("---")
+
 # 管理者パネル
 st.sidebar.subheader("⚙️ 管理者パネル")
 

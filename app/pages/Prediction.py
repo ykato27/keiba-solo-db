@@ -10,9 +10,9 @@ from pathlib import Path
 # パス設定
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import queries
-import prediction_model as pm
-import prediction_model_lightgbm as pml
+from app import queries
+from app import prediction_model as pm
+from app import prediction_model_lightgbm as pml
 
 st.set_page_config(
     page_title="レース予測 - 競馬データベース",
@@ -26,14 +26,22 @@ st.set_page_config(
 
 st.title("🔮 レース予測")
 
-col1, col2 = st.columns([3, 1])
+st.markdown("機械学習を使用したレース結果の予測分析")
+
+# ナビゲーションメニュー
+col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.markdown("機械学習を使用したレース結果の予測分析")
+    if st.button("🏇 競馬データ", use_container_width=True):
+        st.switch_page("Home.py")
 
 with col2:
-    if st.button("← 戻る"):
-        st.switch_page("Home.py")
+    if st.button("🔮 予測", use_container_width=True, disabled=True):
+        pass
+
+with col3:
+    if st.button("📊 エクスポート", use_container_width=True):
+        st.switch_page("pages/DataExport.py")
 
 st.markdown("---")
 

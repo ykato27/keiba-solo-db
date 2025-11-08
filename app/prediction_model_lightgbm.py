@@ -31,6 +31,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app import queries
 from app import features as feat_module
+from app.data_leakage_validator import DataLeakageValidator
+from app.model_metrics_analyzer import ModelMetricsAnalyzer
 
 
 class AdvancedRacePredictionModel:
@@ -221,14 +223,27 @@ class AdvancedRacePredictionModel:
         cv_scores = []
         cv_f1_scores = []
         cv_fold_info = []
+        cv_splits = []
 
         print(f"\nTimeSeriesSplitで {tscv.get_n_splits()} 分割の交差検証を実行中...\n")
 
+        # データリーク検証
+        print("📊 データリーク検証を実行中...")
+        cv_validation_results = DataLeakageValidator.validate_cv_splits(
+            X, y, race_dates, list(tscv.split(X))
+        )
+        DataLeakageValidator.print_validation_report(cv_validation_results)
+
+        if not cv_validation_results['all_valid']:
+            print("⚠️ 警告: いくつかのFoldでデータリーク検証に失敗しました")
+
+        # 再度CV分割を取得（前回の split は消費済み）
         fold_num = 0
         for train_idx, test_idx in tscv.split(X):
             fold_num += 1
             X_train, X_test = X[train_idx], X[test_idx]
             y_train, y_test = y[train_idx], y[test_idx]
+            cv_splits.append((train_idx, test_idx))
 
             # 時間範囲の確認（データリーク防止検証）
             if race_dates:
@@ -253,6 +268,12 @@ class AdvancedRacePredictionModel:
 
             # 評価（複数指標）
             y_pred = self.model.predict(X_test_scaled)
+
+            # 予測確率の取得（可能な場合）
+            y_pred_proba = None
+            if hasattr(self.model, 'predict_proba'):
+                y_pred_proba = self.model.predict_proba(X_test_scaled)
+
             accuracy = accuracy_score(y_test, y_pred)
 
             # マクロ平均 F1 スコア（クラス不均衡に強い）
@@ -267,17 +288,27 @@ class AdvancedRacePredictionModel:
             # 混同行列
             cm = confusion_matrix(y_test, y_pred, labels=unique_classes)
 
+            # クラス別メトリクスの計算
+            class_metrics = ModelMetricsAnalyzer.calculate_class_metrics(
+                y_test, y_pred, y_pred_proba
+            )
+
             fold_info = {
                 'fold': fold_num,
                 'accuracy': accuracy,
                 'f1_macro': f1_macro,
                 'f1_weighted': f1_weighted,
                 'confusion_matrix': cm.tolist(),
+                'class_metrics': class_metrics,  # クラス別メトリクスを追加
+                'metrics': class_metrics,  # サマリーで使用
             }
             cv_fold_info.append(fold_info)
 
             print(f"    精度: {accuracy:.4f}, F1(macro): {f1_macro:.4f}, F1(weighted): {f1_weighted:.4f}")
             print(f"    混同行列:\n{cm}\n")
+
+            # クラス別メトリクスの詳細出力
+            ModelMetricsAnalyzer.print_detailed_report(class_metrics, fold_num)
 
         # 最終的にすべてのデータで訓練
         X_scaled = self.scaler.fit_transform(X)
@@ -302,6 +333,7 @@ class AdvancedRacePredictionModel:
             'class_distribution': class_distribution,
             'class_weights': class_weight_dict,
             'training_samples': len(X),
+            'data_leakage_validation': cv_validation_results,  # データリーク検証結果
         }
 
     def predict_race_order(self, horse_ids: List[int], race_info: Dict = None) -> Dict:

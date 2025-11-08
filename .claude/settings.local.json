@@ -23,7 +23,8 @@
       "Bash(gh pr list:*)",
       "Bash(git fetch:*)",
       "Bash(git pull:*)",
-      "Bash(python test_betting_optimizer.py:*)"
+      "Bash(python test_betting_optimizer.py:*)",
+      "Bash(cd:*)"
     ],
     "deny": [],
     "ask": []

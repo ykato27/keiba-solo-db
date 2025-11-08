@@ -43,12 +43,25 @@
 from app.lib import db  # ローカルでは動くが、Streamlit Cloud は動かない
 
 # ✅ 解決
-# 単純な構造にする：app/ 直下にモジュール配置
-sys.path.insert(0, str(Path(__file__).parent.parent))
-import db
+# プロジェクトルートを sys.path に追加
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # app/pages から見て、プロジェクトルート
+from app import queries, db
+from scraper import fetch_future_races  # パッケージ内は相対インポート使用
 ```
 
 **理由**：Streamlit Cloud は package structure を認識しにくい。フラット構造が安全。
+
+**パッケージ内部の相対インポート**：
+```python
+# ❌ パッケージ内で絶対インポートを使うと、Cloud では失敗
+# scraper/fetch_future_races.py 内で：
+from scraper.rate_limit import fetch_url_with_retry  # ❌ 失敗
+
+# ✅ 相対インポートを使う
+from .rate_limit import fetch_url_with_retry  # ✅ Cloud でも動く
+```
+
+**理由**：パッケージ内部では相対インポートが最も堅牢。環境依存を排除できる。
 
 #### パターン2：ファイル移動後のパス参照破損
 ```python
@@ -319,8 +332,6 @@ st.success("訓練が完了しました")
 - **キャッシング不要**：UI 状態（selectbox の値など）、重い計算が1回なら可
 - **エラー処理**：本番レベルなら except を分ける、開発中なら簡潔でも OK
 - **進捗表示**：5秒以上かかる処理は必ず with st.status() で表示
-
----
 
 ---
 

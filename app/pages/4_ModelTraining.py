@@ -64,6 +64,13 @@ with col8:
 st.markdown("---")
 
 # ========================
+# サイドバー
+# ========================
+
+from app.sidebar_utils import render_sidebar
+render_sidebar()
+
+# ========================
 # Tab 1: バックテスト
 # ========================
 

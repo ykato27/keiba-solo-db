@@ -87,6 +87,13 @@ with col8:
 
 st.markdown("---")
 
+# ========================
+# サイドバー
+# ========================
+
+from app.sidebar_utils import render_sidebar
+render_sidebar()
+
 st.markdown(f"**出走馬数**: {len(entries)}")
 
 st.markdown("---")

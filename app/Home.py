@@ -60,29 +60,10 @@ if not db.verify_schema():
 # サイドバー
 # ========================
 
-st.sidebar.title("🐴 競馬データベース")
-st.sidebar.markdown("---")
+from app.sidebar_utils import render_sidebar
+render_sidebar()
 
-# ナビゲーションメニュー
-st.sidebar.subheader("📋 メニュー")
-
-col1, col2, col3 = st.sidebar.columns(3)
-
-with col1:
-    if st.button("🏠 ホーム", use_container_width=True, disabled=True):
-        pass
-
-with col2:
-    if st.button("📅 将来レース", use_container_width=True):
-        st.switch_page("pages/2_FutureRaces.py")
-
-with col3:
-    if st.button("📊 エクスポート", use_container_width=True):
-        st.switch_page("pages/3_DataExport.py")
-
-st.sidebar.markdown("---")
-
-# 管理者パネル
+# ⚙️ 管理者パネル
 st.sidebar.subheader("⚙️ 管理者パネル")
 
 st.sidebar.write("**本番データを投入**")
@@ -162,13 +143,6 @@ if st.sidebar.button("📥 本番データを投入", use_container_width=True):
 
 st.sidebar.markdown("---")
 
-# 予測ページへのリンク
-st.sidebar.subheader("🔮 レース予測")
-if st.sidebar.button("予測ページへ移動", use_container_width=True):
-    st.switch_page("pages/Prediction.py")
-
-st.sidebar.markdown("---")
-
 # データ取得
 all_dates = queries.get_all_race_dates()
 
@@ -179,14 +153,17 @@ if not all_dates:
 
 st.sidebar.markdown("---")
 
-# 統計情報
-st.sidebar.subheader("📈 統計")
-total_races = len(all_dates)
-st.sidebar.metric("開催日数", total_races)
-
-st.sidebar.markdown("---")
+# 📚 ヘルプ
+st.sidebar.subheader("📚 ヘルプ")
 st.sidebar.info(
-    "💡 「詳細」ボタンでレース詳細ページに移動します"
+    """
+    **使い方:**
+    1. 検索エリアで開催日・会場を選択
+    2. 月間/単日ビューを切り替え
+    3. レースをクリックして詳細確認
+    4. 「モデル学習」でモデルを訓練
+    5. 「馬券推奨」で最適配分を確認
+    """
 )
 
 # ========================
@@ -198,24 +175,40 @@ st.title("🐴 競馬レース一覧")
 # 検索セクション
 st.subheader("🔍 検索")
 
+# 月を抽出してユニークにして、最新順にソート
+from datetime import datetime
+unique_months = sorted(set(d[:7] for d in all_dates), reverse=True)  # YYYY-MM形式, 最新順
+
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    selected_date = st.selectbox(
-        "開催日",
-        options=all_dates,
-        format_func=lambda x: f"{x} ({len(queries.get_courses_by_date(x))}開催)",
+    selected_month = st.selectbox(
+        "開催月",
+        options=unique_months,
+        format_func=lambda x: f"{x}年{x[-2:]}月",
     )
 
+# 選択月の全開催日を取得（最新順）
+month_dates = sorted(
+    [d for d in all_dates if d.startswith(selected_month)],
+    reverse=True
+)
+
+# 月内の全開催場を取得
+all_courses_in_month = set()
+for date in month_dates:
+    courses_for_date = queries.get_courses_by_date(date)
+    if courses_for_date:
+        all_courses_in_month.update(courses_for_date)
+
 with col2:
-    courses = queries.get_courses_by_date(selected_date)
-    if courses:
+    if all_courses_in_month:
         selected_course = st.selectbox(
             "開催場",
-            options=courses,
+            options=sorted(all_courses_in_month),
         )
     else:
-        st.error(f"❌ {selected_date} の開催情報がありません")
+        st.error(f"❌ {selected_month} の開催情報がありません")
         st.stop()
 
 with col3:
@@ -233,37 +226,23 @@ st.markdown("---")
 # ========================
 
 if display_mode == "1ヶ月 (3列)":
-    # 1ヶ月分のレース情報を3列で表示
-    from datetime import datetime, timedelta
+    # 1ヶ月分のレース情報を3列で表示（最新順）
 
-    # 選択された日付から1ヶ月分のレース情報を取得
-    try:
-        selected_dt = datetime.strptime(selected_date, "%Y-%m-%d")
-    except:
-        selected_dt = datetime.now()
+    # 選択月の開催日を最新順で取得
+    display_dates = sorted(
+        [d for d in all_dates if d.startswith(selected_month)],
+        reverse=True
+    )
 
-    # その月の全日を取得
-    month_start = selected_dt.replace(day=1)
-    # 次の月の1日を取得して、1日前を月の最終日とする
-    if selected_dt.month == 12:
-        month_end = selected_dt.replace(year=selected_dt.year + 1, month=1, day=1) - timedelta(days=1)
-    else:
-        month_end = selected_dt.replace(month=selected_dt.month + 1, day=1) - timedelta(days=1)
-
-    # 月の全日付を取得
-    month_dates = [d.strftime("%Y-%m-%d") for d in
-                   [month_start + timedelta(days=x) for x in range((month_end - month_start).days + 1)]
-                   if d.strftime("%Y-%m-%d") in all_dates]
-
-    st.markdown(f"### {selected_date[:7]} - {selected_course}")
-    st.markdown(f"**{len(month_dates)} 日開催**")
+    st.markdown(f"### {selected_month}年 - {selected_course}")
+    st.markdown(f"**{len(display_dates)} 日開催**")
     st.markdown("---")
 
     # 3列でレース情報を表示
-    if month_dates:
+    if display_dates:
         cols = st.columns(3)
 
-        for idx, race_date in enumerate(month_dates):
+        for idx, race_date in enumerate(display_dates):
             col_idx = idx % 3
             races = queries.get_races(race_date, selected_course)
 
@@ -290,14 +269,25 @@ if display_mode == "1ヶ月 (3列)":
                     else:
                         st.caption("⚠️ レース情報なし")
     else:
-        st.info(f"📋 {selected_date[:7]} のレース情報がありません")
+        st.info(f"📋 {selected_month}年のレース情報がありません")
 
 else:
     # 単日表示
-    st.markdown(f"### {selected_date} - {selected_course}")
+    # 月内の日付から選択
+    if month_dates:
+        selected_single_date = st.selectbox(
+            "開催日を選択",
+            options=month_dates,
+            index=0
+        )
+    else:
+        st.error(f"❌ {selected_month}年の開催日がありません")
+        st.stop()
+
+    st.markdown(f"### {selected_single_date} - {selected_course}")
 
     # レース一覧を取得
-    races = queries.get_races(selected_date, selected_course)
+    races = queries.get_races(selected_single_date, selected_course)
 
     if not races:
         st.warning(f"レース情報がありません")

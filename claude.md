@@ -31,6 +31,12 @@
 - **main へのマージ・push**：常にユーザー様の確認・許可を待つ（例外なし）
 - **緊急バグ修正**：「main で直ちに修正が必要」という場合のみ別途相談
 
+### ✅ **Feature ブランチへの Push は自動実行**
+- **何をしているか**：feature ブランチへの commit・push は自動実行
+- **理由**：ユーザー様に定期的にプログレスを報告するため
+- **実装**：commit メッセージに改善内容・テスト結果をまとめて記述し、自動で push
+- **例外**：main へのマージ・push のみ常にユーザー様の指示を待つ
+
 ---
 
 ## 🚀 環境差による問題と解決策
@@ -386,15 +392,92 @@ st.success("訓練が完了しました")
 
 ---
 
+## 🎨 Streamlit マルチページアプリの UI 設計パターン
+
+### ✅ **Sidebar の DRY 原則実装**
+
+**問題**：8ページすべてに同じ sidebar コードが重複していた
+```python
+# ❌ 各ページで繰り返し
+st.sidebar.subheader("📊 データ統計")
+# ... 同じロジック × 8ページ
+```
+
+**解決**：`sidebar_utils.py` に統一化
+```python
+# ✅ 作成：app/sidebar_utils.py
+def render_sidebar():
+    """統一されたサイドバーをレンダリング"""
+    st.sidebar.title("🐴 競馬DB")
+    # データ統計、ナビゲーション、ヘルプを一元管理
+
+# 使用：全ページで1行
+from app.sidebar_utils import render_sidebar
+render_sidebar()
+```
+
+**効果**：
+- コード重複 8倍削減
+- 更新時は sidebar_utils.py のみ修正でOK
+- ページ追加時も自動的に統一 sidebar を使用
+
+### 📌 **判断基準：UI コンポーネント化時**
+- **コードが3ページ以上で重複**：即座に utils に抽出
+- **今後も使うと確信**：抽出して OK（試行段階なら不要）
+- **ダイナミックな内容**（統計値など）：関数引数または外部データで対応
+
+### ✅ **検索インターフェースの設計パターン**
+
+**ユーザー要求**：「月単位で検索し、最新順に表示したい」
+
+**実装ステップ**：
+```python
+# Step 1: 一意の月を抽出（最新順）
+unique_months = sorted(set(d[:7] for d in all_dates), reverse=True)
+
+# Step 2: 月内の全開催場を集計
+all_courses_in_month = set()
+for date in month_dates:
+    courses = queries.get_courses_by_date(date)
+    all_courses_in_month.update(courses)
+
+# Step 3: 選択月の開催日を最新順で取得
+display_dates = sorted(
+    [d for d in all_dates if d.startswith(selected_month)],
+    reverse=True
+)
+
+# Step 4：3列レイアウトで表示
+cols = st.columns(3)
+for idx, date in enumerate(display_dates):
+    col_idx = idx % 3
+    with cols[col_idx]:
+        # レース情報を表示
+```
+
+**ポイント**：
+- `set()` で重複除去、`sorted(..., reverse=True)` で最新順
+- セレクタは **カスケード設計**（月 → 場所）で直感的に
+- 3列レイアウトは `idx % 3` で簡潔に実装
+
+### 📌 **判断基準：検索 UI 設計時**
+- **多段階選択**（月 → 場所 → 詳細）：カスケード型が最適
+- **日付ソート**：常に `reverse=True` で新しい順が自然
+- **グリッド表示**：`idx % cols_count` でシンプルに循環配置
+
+---
+
 ## 🏁 このプロジェクトの実装成果
 
 ✅ SQLite 競馬データベース（8テーブル）
-✅ Streamlit マルチページ web アプリ（5ページ）
+✅ Streamlit マルチページ web アプリ（8ページ）
 ✅ リアルな分布を持つテストデータ生成（3-5年分スケール対応）
 ✅ 2つの機械学習モデル（Random Forest + LightGBM with TimeSeriesSplit）
 ✅ 60+個の複合特徴量（WHO×WHEN×RACE×ENTRY×PEDIGREE 5次元）
+✅ 統一 sidebar コンポーネント（8ページで共有）
+✅ 月単位の直感的な検索インターフェース（カスケード + 最新順）
 ✅ 進捗表示・エラーハンドリング整備
-✅ This claude.md 知識ドキュメント
+✅ CLAUDE.md ガイドライン（継続更新）
 
 ---
 

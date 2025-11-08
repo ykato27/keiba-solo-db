@@ -90,6 +90,13 @@ if horse_details.get("birth_year"):
 st.markdown("---")
 
 # ========================
+# サイドバー
+# ========================
+
+from app.sidebar_utils import render_sidebar
+render_sidebar()
+
+# ========================
 # 主要指標
 # ========================
 

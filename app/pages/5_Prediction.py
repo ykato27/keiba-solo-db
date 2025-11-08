@@ -67,6 +67,13 @@ with col8:
 st.markdown("---")
 
 # ========================
+# サイドバー
+# ========================
+
+from app.sidebar_utils import render_sidebar
+render_sidebar()
+
+# ========================
 # モデルの選択と管理
 # ========================
 

@@ -66,23 +66,19 @@ st.sidebar.markdown("---")
 # ナビゲーションメニュー
 st.sidebar.subheader("📋 メニュー")
 
-col1, col2, col3, col4 = st.sidebar.columns(4)
+col1, col2, col3 = st.sidebar.columns(3)
 
 with col1:
-    if st.button("🏇 競馬データ", use_container_width=True, disabled=True):
+    if st.button("🏠 ホーム", use_container_width=True, disabled=True):
         pass
 
 with col2:
-    if st.button("🔮 予測", use_container_width=True):
-        st.switch_page("pages/Prediction.py")
+    if st.button("📅 将来レース", use_container_width=True):
+        st.switch_page("pages/2_FutureRaces.py")
 
 with col3:
-    if st.button("📅 将来レース", use_container_width=True):
-        st.switch_page("pages/FutureRaces.py")
-
-with col4:
     if st.button("📊 エクスポート", use_container_width=True):
-        st.switch_page("pages/DataExport.py")
+        st.switch_page("pages/3_DataExport.py")
 
 st.sidebar.markdown("---")
 

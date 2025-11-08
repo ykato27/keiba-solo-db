@@ -36,19 +36,31 @@ st.title("🔮 レース予測 & 馬券配分")
 st.markdown("バックテスト → モデル訓練 → 将来レース予測 → 最適馬券配分")
 
 # ナビゲーション
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
 with col1:
-    if st.button("🏇 競馬データ", use_container_width=True):
+    if st.button("🏠 ホーム", use_container_width=True):
         st.switch_page("Home.py")
 with col2:
-    if st.button("🔮 予測", use_container_width=True, disabled=True):
-        pass
-with col3:
     if st.button("📅 将来レース", use_container_width=True):
-        st.switch_page("pages/FutureRaces.py")
-with col4:
+        st.switch_page("pages/2_FutureRaces.py")
+with col3:
     if st.button("📊 エクスポート", use_container_width=True):
-        st.switch_page("pages/DataExport.py")
+        st.switch_page("pages/3_DataExport.py")
+with col4:
+    if st.button("🚀 学習", use_container_width=True):
+        st.switch_page("pages/4_ModelTraining.py")
+with col5:
+    if st.button("🔮 予測", use_container_width=True):
+        st.switch_page("pages/5_Prediction.py")
+with col6:
+    if st.button("💰 推奨", use_container_width=True, disabled=True):
+        pass
+with col7:
+    if st.button("🐴 馬", use_container_width=True):
+        st.switch_page("pages/7_Horse.py")
+with col8:
+    if st.button("🏇 レース", use_container_width=True):
+        st.switch_page("pages/8_Race.py")
 
 st.markdown("---")
 

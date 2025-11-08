@@ -13,8 +13,8 @@ import time
 
 from bs4 import BeautifulSoup
 
-from scraper.rate_limit import fetch_url_with_retry
-from scraper.selectors import BASE_URL
+from .rate_limit import fetch_url_with_retry
+from .selectors import BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -148,19 +148,51 @@ def _parse_upcoming_races(html: str, days_ahead: int = 14) -> List[Dict[str, Any
     try:
         soup = BeautifulSoup(html, "lxml")
 
-        # JRAサイトの実装に合わせてセレクタを調整
-        # 「今週のレース」セクションを探す
-        race_links = soup.find_all("a", href=re.compile(r"/keiba/race/\d{12}/"))
+        # JRAサイトのセレクタ候補（複数用意して堅牢性向上）
+        # JRAサイトの構造変更に対応するため、複数のセレクタパターンを試行
+        race_links = []
+        selector_candidates = [
+            lambda s: s.find_all("a", href=re.compile(r"/keiba/race/\d{12}/")),  # 標準セレクタ
+            lambda s: s.find_all("a", href=re.compile(r"/keiba/entry.*\d{12}")),  # 代替セレクタ1
+            lambda s: s.find_all("a", href=re.compile(r"/keiba.*race.*\d{12}")),  # 代替セレクタ2
+        ]
+
+        for i, selector_func in enumerate(selector_candidates):
+            try:
+                race_links = selector_func(soup)
+                if race_links:
+                    logger.info(f"セレクタ #{i} 成功: {len(race_links)}件のリンク取得")
+                    break
+            except Exception as e:
+                logger.debug(f"セレクタ #{i} 失敗: {e}")
+                continue
+
+        if not race_links:
+            logger.warning("いずれのセレクタもレース情報を抽出できませんでした")
+            logger.debug(f"HTML先頭500文字:\n{html[:500]}")
+            return races
 
         for link in race_links:
             try:
                 href = link.get("href", "")
-                # URLからrace_idを抽出（例: /keiba/race/202501010101/ -> 202501010101）
-                match = re.search(r"/keiba/race/(\d{12})/", href)
-                if not match:
-                    continue
 
-                race_id = match.group(1)
+                # URLからrace_idを抽出（複数パターンに対応）
+                race_id = None
+                race_id_patterns = [
+                    r"/keiba/race/(\d{12})/",  # 標準: /keiba/race/202501010101/
+                    r"race_id[=?](\d{12})",     # 代替: race_id=202501010101 or race_id?202501010101
+                    r"/(\d{12})[/?]",           # 広いパターン: /202501010101/
+                ]
+
+                for pattern in race_id_patterns:
+                    match = re.search(pattern, href)
+                    if match:
+                        race_id = match.group(1)
+                        break
+
+                if not race_id:
+                    logger.debug(f"race_id抽出失敗: {href}")
+                    continue
 
                 # race_idから日付を抽出
                 year = int(race_id[0:4])
@@ -200,7 +232,7 @@ def _parse_upcoming_races(html: str, days_ahead: int = 14) -> List[Dict[str, Any
         return races
 
 
-def _parse_future_race_card(html: str, race_id: str) -> Dict[str, Any]]:
+def _parse_future_race_card(html: str, race_id: str) -> Dict[str, Any]:
     """
     将来レースの出馬表HTMLをパース
 

@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app import queries
 from app import prediction_model as pm
 from app import prediction_model_lightgbm as pml
+from app import backtest
 
 st.set_page_config(
     page_title="レース予測 - 競馬データベース",
@@ -103,10 +104,37 @@ if not model_info['is_trained']:
                     st.write("⏳ TimeSeriesSplitで交差検証中...")
                     cv_results = model.train_with_cross_validation()
 
-                    st.write(f"📊 交差検証結果:")
+                    # 訓練データ情報
+                    st.write(f"📊 訓練データ情報:")
+                    st.write(f"  - 総サンプル数: {cv_results['training_samples']}")
+                    st.write(f"  - クラス分布: {cv_results['class_distribution']}")
+
+                    # クラス重み付け
+                    st.write(f"⚖️ クラス重み付け（不均衡対策）:")
+                    for cls_id, weight in cv_results['class_weights'].items():
+                        cls_name = {0: "1着", 1: "2-3着", 2: "その他"}.get(int(cls_id), "不明")
+                        st.write(f"  - {cls_name}: {weight:.4f}")
+
+                    # 交差検証結果（精度）
+                    st.write(f"📊 交差検証結果（精度）:")
                     st.write(f"  - 平均精度: {cv_results['mean_cv_accuracy']:.4f}")
                     st.write(f"  - 標準偏差: {cv_results['std_cv_accuracy']:.4f}")
                     st.write(f"  - 各Fold精度: {[f'{s:.4f}' for s in cv_results['cv_scores']]}")
+
+                    # F1スコア（重要：クラス不均衡への対応指標）
+                    st.write(f"📊 交差検証結果（F1スコア）:")
+                    st.write(f"  - 平均F1(マクロ): {cv_results['mean_cv_f1']:.4f}")
+                    st.write(f"  - 標準偏差: {cv_results['std_cv_f1']:.4f}")
+                    st.write(f"  - 各FoldF1: {[f'{s:.4f}' for s in cv_results['cv_f1_scores']]}")
+
+                    # 詳細なFold別情報
+                    with st.expander("🔍 Fold別詳細情報"):
+                        for fold_info in cv_results['fold_details']:
+                            st.write(f"**Fold {fold_info['fold']}**")
+                            st.write(f"  - 精度: {fold_info['accuracy']:.4f}")
+                            st.write(f"  - F1(マクロ): {fold_info['f1_macro']:.4f}")
+                            st.write(f"  - F1(重み付き): {fold_info['f1_weighted']:.4f}")
+                            st.write(f"  - 混同行列: {fold_info['confusion_matrix']}")
                 else:
                     st.write("訓練データを構築中...")
                     model.train()
@@ -296,6 +324,179 @@ if st.button("🔮 予測を実行", use_container_width=True, type="primary"):
 
     else:
         st.error(f"予測エラー: {prediction_results.get('error', '不明なエラー')}")
+
+st.markdown("---")
+
+# ========================
+# バックテスト
+# ========================
+
+st.subheader("📊 バックテスト（過去レースで的中率測定）")
+
+st.markdown("""
+選択したモデルを過去のレースで実行し、実際の着順と比較して的中率を計測します。
+""")
+
+# バックテスト設定
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    backtest_start_date = st.date_input(
+        "開始日",
+        value=None,
+        help="バックテスト対象期間の開始日"
+    )
+
+with col2:
+    backtest_end_date = st.date_input(
+        "終了日",
+        value=None,
+        help="バックテスト対象期間の終了日"
+    )
+
+with col3:
+    max_sample_races = st.number_input(
+        "最大レース数",
+        min_value=10,
+        max_value=500,
+        value=100,
+        step=10,
+        help="バックテスト対象とするレース数"
+    )
+
+if st.button("▶️ バックテストを実行", use_container_width=True, type="secondary"):
+    if not backtest_start_date or not backtest_end_date:
+        st.error("❌ 開始日と終了日を指定してください")
+    elif backtest_end_date < backtest_start_date:
+        st.error("❌ 終了日が開始日より前です")
+    else:
+        with st.status("バックテスト実行中...", expanded=True) as status:
+            try:
+                if model_choice == "LightGBM（推奨）":
+                    st.write("📊 バックテスト実行中...")
+
+                    # バックテストランナーを取得
+                    bt_runner = backtest.get_backtest_runner()
+
+                    # バックテスト実行
+                    backtest_results = bt_runner.run_backtest(
+                        start_date=backtest_start_date.strftime("%Y-%m-%d"),
+                        end_date=backtest_end_date.strftime("%Y-%m-%d"),
+                        sample_races=max_sample_races
+                    )
+
+                    status.update(label="✅ 完了!", state="complete")
+
+                    # 結果表示
+                    st.subheader("🎯 バックテスト結果")
+
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric(
+                            "対象レース数",
+                            backtest_results['total_races']
+                        )
+                    with col2:
+                        st.metric(
+                            "総予測数",
+                            backtest_results['total_predictions']
+                        )
+                    with col3:
+                        st.metric(
+                            "期間",
+                            backtest_results['date_range']
+                        )
+
+                    st.markdown("---")
+
+                    # 的中率
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        st.write("**1着予測の的中率**")
+                        st.metric(
+                            "1着的中数",
+                            f"{backtest_results['win_hits']}",
+                            f"{backtest_results['win_accuracy']:.2f}%"
+                        )
+
+                    with col2:
+                        st.write("**複勝予測の的中率**")
+                        st.metric(
+                            "2-3着的中数",
+                            f"{backtest_results['place_hits']}",
+                            f"{backtest_results['place_accuracy']:.2f}%"
+                        )
+
+                    st.markdown("---")
+
+                    # 期待値計算
+                    st.write("**期待値分析**")
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        assumed_odds_win = st.number_input(
+                            "仮定する1着オッズ",
+                            min_value=1.0,
+                            value=5.0,
+                            step=0.5
+                        )
+
+                    with col2:
+                        assumed_odds_place = st.number_input(
+                            "仮定する複勝オッズ",
+                            min_value=1.0,
+                            value=2.0,
+                            step=0.1
+                        )
+
+                    # 期待値を計算
+                    ev_results = bt_runner.calculate_expected_value(
+                        backtest_results,
+                        assumed_odds_win=assumed_odds_win,
+                        assumed_odds_place=assumed_odds_place
+                    )
+
+                    if 'error' not in ev_results:
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+                            st.write("**1着投票の期待値**")
+                            st.metric(
+                                "勝率",
+                                f"{ev_results['win_win_rate']:.2%}",
+                                f"EV: {ev_results['win_expected_value']:.3f}"
+                            )
+
+                        with col2:
+                            st.write("**複勝投票の期待値**")
+                            st.metric(
+                                "的中率",
+                                f"{ev_results['place_hit_rate']:.2%}",
+                                f"EV: {ev_results['place_expected_value']:.3f}"
+                            )
+
+                        st.info(f"💡 {ev_results['recommendation']}")
+
+                    # 詳細レース情報
+                    with st.expander("🔍 レース別詳細"):
+                        for race_detail in backtest_results['race_details'][:10]:
+                            st.write(f"**{race_detail['race_date']} {race_detail['course']} ({race_detail['distance_m']}m)**")
+
+                            for hit in race_detail['hits']:
+                                status_emoji = "✅" if hit['is_win_hit'] else ("🟢" if hit['is_place_hit'] else "❌")
+                                st.write(f"{status_emoji} {hit['horse_name']}: 予想{hit['predicted_rank']}位 → 実際{hit['actual_finish']}位")
+
+                            st.divider()
+                else:
+                    st.warning("⚠️ Random Forestではバックテスト機能は未対応です")
+
+            except Exception as e:
+                status.update(label="❌ エラー", state="error")
+                st.error(f"バックテストエラー: {e}")
+                import traceback
+                st.code(traceback.format_exc())
 
 st.markdown("---")
 

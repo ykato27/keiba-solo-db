@@ -19,7 +19,10 @@
       "Bash(python test_prediction_page.py:*)",
       "Bash(python test_csv_export.py:*)",
       "WebFetch(domain:www.jra.go.jp)",
-      "Bash(python -m py_compile:*)"
+      "Bash(python -m py_compile:*)",
+      "Bash(gh pr list:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []

@@ -4,25 +4,33 @@ JRA（日本中央競馬会）サイトから競馬データをスクレイピ�
 
 ## 機能
 
-- **データ取得**: JRAサイトのレース情報をスクレイピング
-- **データ蓄積**: SQLiteデータベースに効率的に保存
+- **データ取得**: JRAサイトから過去データと将来のレース情報をスクレイピング
+- **データ蓄積**: SQLiteデータベースに自動的に蓄積・管理
 - **指標計算**: 馬の勝率、連対率、複勝率、近走指数などを自動計算
 - **可視化**: Streamlitでインタラクティブにデータを閲覧
-- **自動更新**: GitHub Actionsで週次更新を自動実行
+- **機械学習予測**: Random Forest + LightGBMで競馬の勝馬を予測
+- **ベッティング最適化**: Kelly Criterionで最適な賭け金を計算
 
 ## システム構成
 
 ```
-repo/
+keiba-solo-db/
   app/                           # Streamlitアプリケーション
     Home.py                      # ホームページ
     pages/
-      Race.py                    # レース詳細ページ
-      Horse.py                   # 馬詳細ページ
-    lib/
-      db.py                      # DB接続・クエリ
-      queries.py                 # キャッシュ付きクエリ
-      charts.py                  # グラフ生成
+      1_Race.py                  # レース詳細ページ
+      2_FutureRaces.py           # 将来レース＆予測
+      3_Horse.py                 # 馬詳細ページ
+      4_ModelTraining.py         # モデル訓練
+      5_Prediction.py            # 予測実行
+      6_Betting.py               # ベッティング最適化
+    db.py                        # DB接続・クエリ
+    queries.py                   # キャッシュ付きクエリ
+    charts.py                    # グラフ生成
+    features.py                  # 特徴量エンジニアリング
+    prediction_model.py          # Random Forest モデル
+    prediction_model_lightgbm.py # LightGBM モデル
+    betting_optimizer.py         # Kelly Criterion 計算
 
   scraper/                       # スクレイピング機能
     selectors.py                 # HTML選択子管理
@@ -30,6 +38,7 @@ repo/
     fetch_calendar.py            # レースカレンダー取得
     fetch_card.py                # 出馬表取得
     fetch_result.py              # 結果取得
+    fetch_future_races.py        # 将来レース取得
 
   etl/                           # ETL処理
     base.py                      # 基本クラス
@@ -41,25 +50,43 @@ repo/
   metrics/                       # 指標計算
     build_horse_metrics.py       # 馬の指標計算
 
-  sql/
-    schema.sql                   # SQLスキーマ
+  tests/                         # テストスイート
+    test_pipeline.py             # パイプライン統合テスト
+    test_csv_export.py           # CSV出力テスト
+    test_prediction_page.py      # 予測ページテスト
+    test_betting_optimizer.py    # ベッティング最適化テスト
+    test_ds_improvements.py      # データサイエンス検証
+
+  docs/                          # ドキュメント
+    INDEX.md                     # ドキュメントインデックス
+    ARCHITECTURE.md              # システム設計書
+    API.md                       # API リファレンス
+    DEVELOPMENT.md               # 開発ガイド
+    TESTING.md                   # テストガイド
+    CLAUDE.md                    # AI開発ガイドライン
+    CRITICAL_IMPROVEMENTS_IMPLEMENTED.md
+    DS_CRITICAL_IMPROVEMENTS.md
+    BETTING_OPTIMIZATION_GUIDE.md
+    STREAMLIT_CACHE_FIX.md
 
   data/
     keiba.db                     # SQLiteデータベース
     logs/                        # スクレイピングログ
 
-  .github/workflows/
-    backfill.yml                 # 初回一括取得ワークフロー
-    weekly_cards.yml             # 週次出馬表取得
-    weekly_results.yml           # 週次結果取得＋指標計算
+  requirements.txt               # Python依存関係
+  pyproject.toml                 # Black, isort, pytest設定
+  mypy.ini                       # 型チェック設定
+  .flake8                        # スタイル設定
+  lint.bat / lint.sh             # コード品質チェックスクリプト
 ```
 
 ## インストール
 
 ### 前提条件
 
-- Python 3.11以上
+- Python 3.9以上
 - Git
+- pip または conda
 
 ### セットアップ
 
@@ -68,39 +95,49 @@ repo/
 git clone <repo-url>
 cd keiba-solo-db
 
+# 仮想環境を作成（推奨）
+python -m venv venv
+source venv/bin/activate  # macOS/Linux
+# または
+venv\Scripts\activate  # Windows
+
 # 依存関係をインストール
 pip install -r requirements.txt
 
 # データベーススキーマを初期化
-python -c "from app.lib import db; db.init_schema()"
+python -c "from app.db import init_schema; init_schema()"
+
+# Streamlitアプリを起動
+streamlit run app/Home.py
 ```
 
 ## 使い方
 
-### 1. 初回データ取得（一括）
+### 1. ローカルでデータ取得（手動）
 
-GitHub Actionsで手動実行:
-
-1. GitHubのリポジトリを開く
-2. **Actions** → **backfill** ワークフローを選択
-3. **Run workflow** をクリック
-4. 開始年度と終了年度を入力（例: 2019-2024）
-5. **Run workflow** を実行
-
-または、ローカルで実行:
+初回データの一括取得:
 
 ```bash
+# レースカレンダーを取得
 python -m scraper.fetch_calendar --start 2019 --end 2024
+
+# 出馬表を取得
 python -m scraper.fetch_card --years 2019 2020 2021 2022 2023 2024
+
+# レース結果を取得
 python -m scraper.fetch_result --years 2019 2020 2021 2022 2023 2024
+
+# ETL処理を実行
 python -m etl.upsert_master
 python -m etl.upsert_race
 python -m etl.upsert_entry
 python -m etl.apply_alias
+
+# 指標を計算
 python -m metrics.build_horse_metrics
 ```
 
-### 2. Streamlitアプリを起動
+### 2. Streamlitアプリで利用
 
 ```bash
 streamlit run app/Home.py
@@ -108,14 +145,23 @@ streamlit run app/Home.py
 
 ブラウザが開き、http://localhost:8501 でアプリが表示されます。
 
-### 3. 週次自動更新
+**ページ構成**:
+- **Home** - 全体概要とデータ統計
+- **Race** - レース詳細情報とエントリー表示
+- **FutureRaces** - 将来のレース予測と自動データ蓄積
+- **Horse** - 馬の成績分析
+- **ModelTraining** - 機械学習モデルの訓練
+- **Prediction** - レースの勝馬予測
+- **Betting** - ベッティング最適化（Kelly Criterion）
 
-GitHub Actionsで以下のスケジュールで自動実行:
+### 3. 将来レースの自動蓄積
 
-- **出馬表**: 土曜朝6:00 JST
-- **結果**: 日曜23:30, 月曜6:00 JST
+**2_FutureRaces** ページから:
+- 本日以降のレース日付を選択
+- 「データベースに保存」ボタンでスクレイピング
+- データは自動的にデータベースに蓄積
 
-データベースとコミットは自動的に更新されます。
+**注**: GitHub Actions自動実行は削除されています。ローカルで手動実行してください。
 
 ## データベース設計
 
@@ -190,7 +236,7 @@ sqlite3 data/keiba.db ".schema"
 
 # スキーマをリセット（注意: データが削除されます）
 rm data/keiba.db
-python -c "from app.lib import db; db.init_schema()"
+python -c "from app.db import init_schema; init_schema()"
 ```
 
 ### Streamlit起動エラー
@@ -203,21 +249,33 @@ streamlit cache clear
 pip install -r requirements.txt --upgrade
 ```
 
-## 開発ガイド
+### import エラー（app.lib が見つからない）
 
-### セットアップ
+古い import パスの問題です:
 
-```bash
-# 開発用依存関係をインストール
-pip install -r requirements.txt
+```python
+# ❌ 古い形式
+from app.lib import db
 
-# 開発ツールをセットアップ
-pip install mypy black flake8 pytest pytest-cov
+# ✅ 新しい形式
+from app.db import init_schema
 ```
 
-### コード品質管理
+プロジェクト構造の変更により、`app/lib/` フォルダは削除され、
+モジュールは `app/` 直下に移動しました。
 
-#### ✅ コード整形・チェック実行
+## 開発ガイド
+
+詳細な開発ガイドは `docs/` フォルダを参照してください:
+
+- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - セットアップと開発基準
+- **[docs/TESTING.md](docs/TESTING.md)** - テスト戦略と実行方法
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - システム設計書
+- **[docs/API.md](docs/API.md)** - API リファレンス
+
+### クイックスタート
+
+#### コード品質管理
 
 **Windows:**
 ```bash
@@ -229,54 +287,50 @@ lint.bat
 bash lint.sh
 ```
 
-**個別実行:**
-```bash
-# Black: コード自動整形
-black app etl scraper metrics --line-length 100
+実行内容:
+- **Black**: コード自動整形（PEP 8準拠、行長100文字）
+- **Flake8**: スタイルチェック（PEP 8, import順序, 複雑度）
+- **mypy**: 型チェック（型安全性の検証）
 
-# Flake8: スタイルチェック
-flake8 app etl scraper metrics --max-line-length 100
-
-# mypy: 型チェック
-mypy app etl scraper metrics --ignore-missing-imports
-```
-
-#### 📋 設定ファイル
-
-- `pyproject.toml` - Black, isort, pytest設定
-- `mypy.ini` - mypy詳細設定
-- `.flake8` - Flake8詳細設定
-
-### 新機能を追加する
-
-1. **新しいクエリ**: `app/queries.py` に追加（DB層）
-2. **新しいグラフ**: `app/charts.py` に追加
-3. **新しいページ**: `app/pages/` に新規ファイルを作成
-4. **スクレイパー変更**: `scraper/selectors.py` でセレクタを集約管理
-5. **型ヒント追加**: TypedDict で戻り値を定義
-
-### テストと確認
+#### テスト実行
 
 ```bash
-# コード品質チェック
-lint.bat  # または bash lint.sh
+# 全テスト実行
+pytest tests/ -v
 
-# ローカルでワークフローをシミュレート
-python -m etl.upsert_master
-python -m etl.upsert_race
-python -m etl.upsert_entry
-python -m metrics.build_horse_metrics
-
-# Streamlitで動作確認
-streamlit run app/Home.py
+# カバレッジ付きで実行
+pytest tests/ --cov=app --cov=etl --cov=scraper --cov=metrics
 ```
+
+#### 新機能追加フロー
+
+1. Feature ブランチを作成: `git checkout -b feature/your-feature`
+2. コードを実装（type hints, docstrings必須）
+3. `lint.bat` or `bash lint.sh` でコード品質確認
+4. テストを追加・実行
+5. Commit & Push
+6. GitHub で Pull Request 作成
 
 ### コード品質基準
 
-- **行長**: 100文字以下（black/flake8）
-- **型チェック**: mypy で critical エラーなし
-- **スタイル**: PEP 8 準拠（flake8）
-- **複雑度**: max-complexity = 10 以下
+- **行長**: 100文字以下
+- **型ヒント**: 全新規関数に必須
+- **docstring**: Google形式で記述
+- **テスト**: 新機能ごとにテストを追加
+- **カバレッジ**: 80%以上を目指す
+
+## ドキュメント
+
+プロジェクトの詳細情報は `docs/` フォルダに集約されています:
+
+| ドキュメント | 説明 |
+|-------------|------|
+| [docs/INDEX.md](docs/INDEX.md) | ドキュメント索引・ナビゲーション |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | システム設計・データフロー・DB設計 |
+| [docs/API.md](docs/API.md) | TypedDict型定義・関数リファレンス |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | 開発環境セットアップ・コード基準 |
+| [docs/TESTING.md](docs/TESTING.md) | テスト戦略・pytest実行方法 |
+| [docs/CLAUDE.md](docs/CLAUDE.md) | AI開発ガイドライン・設計原則 |
 
 ## ライセンス
 
@@ -284,19 +338,32 @@ MIT License
 
 ## 更新履歴
 
+- **2025-11** (最新): プロフェッショナル構造化
+  - テスト・ドキュメントの集約（tests/, docs/）
+  - 包括的なドキュメント作成
+  - Black/Flake8/mypy等のコード品質ツール導入
+  - 60+特徴量の機械学習モデル実装
+  - Kelly Criterionベッティング最適化機能追加
+
 - **2024-11**: 初版実装完了
   - スクレイパー実装
   - ETL処理実装
   - Streamlitアプリ実装
-  - GitHub Actions自動化
+  - GitHub Actions自動化（現在は削除）
 
 ## サポート
 
-問題や質問がある場合:
+### 問題がある場合
 
-1. `data/logs/` のエラーログを確認
-2. GitHub Issues で報告
-3. Discussionsで質問
+1. `docs/DEVELOPMENT.md` の**トラブルシューティング**を確認
+2. `data/logs/` のエラーログを確認
+3. GitHub Issues で報告
+
+### 技術的な質問
+
+1. `docs/INDEX.md` でロール別ナビゲーション確認
+2. 関連するドキュメント（ARCHITECTURE.md, API.md等）を参照
+3. `docs/DEVELOPMENT.md` の**コード品質**セクション確認
 
 ---
 

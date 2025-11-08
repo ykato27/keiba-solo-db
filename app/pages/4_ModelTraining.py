@@ -71,15 +71,100 @@ from app.sidebar_utils import render_sidebar
 render_sidebar()
 
 # ========================
-# Tab 1: バックテスト
+# Tabs: モデル訓練とバックテスト
 # ========================
 
 tab1, tab2 = st.tabs([
-    "📊 バックテスト",
     "🚀 モデル訓練",
+    "📊 バックテスト",
 ])
 
 with tab1:
+    st.subheader("🚀 機械学習モデルを訓練")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        model_choice = st.radio(
+            "モデル選択",
+            options=["LightGBM（推奨）", "ランダムフォレスト"],
+            help="LightGBMが推奨（精度が高い）"
+        )
+
+    with col2:
+        # 訓練データ期間（10日単位）
+        days_slider = st.slider(
+            "訓練データ期間（日数）",
+            min_value=3,
+            max_value=36,
+            value=9,
+            help="選択値 × 10日（例：9 = 90日）"
+        )
+        train_days = days_slider * 10
+
+    if st.button("📚 モデルを訓練", type="primary", use_container_width=True):
+        with st.status("モデル訓練中...", expanded=True) as status:
+            try:
+                # モデル選択
+                if model_choice == "LightGBM（推奨）":
+                    model = pml.AdvancedRacePredictionModel()
+                else:
+                    from app import prediction_model as pm
+                    model = pm.RacePredictionModel()
+
+                st.write(f"📊 過去 {train_days} 日間のデータで訓練を開始...")
+
+                # 訓練データ構築
+                X, y, race_dates = model.build_training_data_with_cv()
+
+                st.write(f"✅ 訓練データ: {len(X)} サンプル")
+                st.write(f"✅ 特徴量数: {X.shape[1]}")
+
+                # 訓練実行
+                st.write("🤖 モデル訓練中...")
+                results = model.train()
+
+                st.write(f"✅ 訓練完了")
+
+                status.update(label="✅ 完了", state="complete")
+
+                # 結果表示
+                st.subheader("📊 訓練結果")
+
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    st.metric(
+                        "平均精度",
+                        f"{results.get('mean_cv_accuracy', 0):.2%}",
+                        delta=f"±{results.get('std_cv_accuracy', 0):.2%}"
+                    )
+
+                with col2:
+                    st.metric(
+                        "平均 F1 スコア",
+                        f"{results.get('mean_cv_f1', 0):.4f}"
+                    )
+
+                with col3:
+                    st.metric(
+                        "モデル",
+                        model_choice.split("（")[0]
+                    )
+
+                # Fold詳細
+                if results.get('fold_info'):
+                    with st.expander("Fold別詳細を表示", expanded=False):
+                        fold_df = pd.DataFrame(results['fold_info'])
+                        st.dataframe(fold_df, use_container_width=True)
+
+                st.success("✨ モデルが正常に訓練されました")
+
+            except Exception as e:
+                status.update(label="❌ エラー", state="error")
+                st.error(f"訓練エラー: {e}")
+
+with tab2:
     st.subheader("📊 過去レースでモデルを検証")
 
     col1, col2 = st.columns(2)
@@ -159,142 +244,6 @@ with tab1:
             except Exception as e:
                 status.update(label="❌ エラー", state="error")
                 st.error(f"バックテスト実行エラー: {e}")
-
-# ========================
-# Tab 2: モデル訓練
-# ========================
-
-with tab2:
-    st.subheader("🚀 機械学習モデルを訓練")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        model_choice = st.radio(
-            "モデル選択",
-            options=["LightGBM（推奨）", "ランダムフォレスト"],
-            help="LightGBMが推奨（精度が高い）"
-        )
-
-    with col2:
-        # 訓練データ期間
-        train_days = st.slider(
-            "訓練データ期間（日数）",
-            min_value=30,
-            max_value=365,
-            value=90,
-            help="過去N日間のデータで訓練"
-        )
-
-    if st.button("📚 モデルを訓練", type="primary", use_container_width=True):
-        with st.status("モデル訓練中...", expanded=True) as status:
-            try:
-                # モデル選択
-                if model_choice == "LightGBM（推奨）":
-                    model = pml.AdvancedRacePredictionModel()
-                else:
-                    from app import prediction_model as pm
-                    model = pm.RacePredictionModel()
-
-                st.write(f"📊 過去 {train_days} 日間のデータで訓練を開始...")
-
-                # 訓練データ構築
-                X, y, race_dates = model.build_training_data_with_cv()
-
-                st.write(f"✅ 訓練データ: {len(X) if X is not None else 0} サンプル")
-                if X is not None:
-                    st.write(f"✅ 特徴量数: {X.shape[1]}")
-
-                # 訓練実行
-                st.write("🤖 モデル訓練中...")
-                results = model.train_with_cross_validation()
-
-                st.write(f"✅ 訓練完了")
-
-                status.update(label="✅ 完了", state="complete")
-
-                # 結果表示
-                st.subheader("📊 訓練結果")
-
-                col1, col2, col3 = st.columns(3)
-
-                with col1:
-                    st.metric(
-                        "平均精度",
-                        f"{results.get('mean_cv_accuracy', 0):.2%}",
-                        delta=f"±{results.get('std_cv_accuracy', 0):.2%}"
-                    )
-
-                with col2:
-                    st.metric(
-                        "平均 F1 スコア",
-                        f"{results.get('mean_cv_f1', 0):.4f}"
-                    )
-
-                with col3:
-                    st.metric(
-                        "モデル",
-                        model_choice.split("（")[0]
-                    )
-
-                # データリーク検証結果
-                if 'data_leakage_validation' in results:
-                    st.subheader("🔍 データリーク検証結果")
-                    validation = results['data_leakage_validation']
-
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric(
-                            "総Fold数",
-                            validation.get('total_folds', 0)
-                        )
-                    with col2:
-                        st.metric(
-                            "✅ 有効なFold",
-                            validation.get('summary', {}).get('total_valid_folds', 0)
-                        )
-                    with col3:
-                        status_text = "✅ 合格" if validation.get('all_valid') else "⚠️ 警告有り"
-                        st.metric("全体判定", status_text)
-
-                    # 詳細表示
-                    with st.expander("詳細な検証結果を表示", expanded=False):
-                        for fold in validation.get('folds', []):
-                            st.write(f"**Fold {fold.get('fold_num')}**")
-                            st.write(f"  訓練期間: {fold['train_date_range'][0]} ～ {fold['train_date_range'][1]}")
-                            st.write(f"  テスト期間: {fold['test_date_range'][0]} ～ {fold['test_date_range'][1]}")
-                            if fold.get('days_gap') is not None:
-                                st.write(f"  時間ギャップ: {fold['days_gap']}日")
-                            st.write(f"  判定: {'✅ OK' if fold['is_valid'] else '❌ NG'}")
-
-                # Fold詳細
-                if results.get('fold_details'):
-                    with st.expander("Fold別詳細を表示", expanded=False):
-                        fold_df = pd.DataFrame(results['fold_details'])
-                        st.dataframe(fold_df, use_container_width=True)
-
-                # クラス分布
-                if results.get('class_distribution'):
-                    st.subheader("📊 クラス分布")
-                    class_dist = results['class_distribution']
-                    dist_data = {
-                        'クラス': ['1着', '複勝(2-3着)', 'その他'],
-                        'サンプル数': [
-                            class_dist.get(0, 0),
-                            class_dist.get(1, 0),
-                            class_dist.get(2, 0),
-                        ]
-                    }
-                    dist_df = pd.DataFrame(dist_data)
-                    st.bar_chart(dist_df.set_index('クラス'))
-
-                st.success("✨ モデルが正常に訓練されました")
-
-            except Exception as e:
-                status.update(label="❌ エラー", state="error")
-                st.error(f"訓練エラー: {e}")
-                import traceback
-                st.code(traceback.format_exc())
 
 # 説明セクション
 st.markdown("---")

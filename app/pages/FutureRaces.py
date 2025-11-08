@@ -15,7 +15,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from app import queries, db
 from etl import upsert_race, upsert_entry, apply_alias
 from metrics import build_horse_metrics
-from scraper import fetch_future_races
+# 直接import（キャッシュ問題回避）
+from scraper.fetch_future_races import fetch_upcoming_races, fetch_multiple_race_cards
 
 # ロギング設定
 logging.basicConfig(level=logging.INFO)
@@ -102,7 +103,7 @@ if st.button("📥 将来レース情報を取得", type="primary", use_containe
                 st.write(f"📊 JRA公式サイトから {days_ahead} 日先までのレース情報を取得中...")
 
             # スクレイピング実行（モード選択）
-            upcoming_races = fetch_future_races.fetch_upcoming_races(
+            upcoming_races = fetch_upcoming_races(
                 days_ahead=days_ahead,
                 use_mock=use_mock
             )
@@ -157,7 +158,7 @@ if st.button("📥 将来レース情報を取得", type="primary", use_containe
                 if st.button("🐴 出馬表を取得", type="secondary", use_container_width=True):
                     st.write(f"📋 {len(selected_race_ids)} 件のレースの出馬表を取得中...")
 
-                    race_cards = fetch_future_races.fetch_multiple_race_cards(selected_race_ids)
+                    race_cards = fetch_multiple_race_cards(selected_race_ids)
 
                     total_entries = sum(len(card.get('entries', [])) for card in race_cards)
                     st.write(f"✅ {total_entries} 頭の出走馬情報を取得しました")

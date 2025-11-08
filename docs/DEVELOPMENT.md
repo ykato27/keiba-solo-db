@@ -4,7 +4,7 @@
 
 ### Prerequisites
 - Python 3.9 or higher
-- pip or conda for package management
+- [uv](https://docs.astral.sh/uv/) - Python package manager
 - Git for version control
 - SQLite3 (usually included with Python)
 
@@ -16,22 +16,17 @@ git clone <repository-url>
 cd keiba-solo-db
 ```
 
-2. **Create virtual environment (recommended)**
+2. **Install dependencies with uv (automatically creates virtual environment)**
 ```bash
-# Using venv
-python -m venv venv
-source venv/bin/activate  # macOS/Linux
-# OR
-venv\Scripts\activate  # Windows
-
-# Using conda
-conda create -n keiba python=3.9
-conda activate keiba
+uv sync
 ```
 
-3. **Install dependencies**
+3. **Activate virtual environment**
 ```bash
-pip install -r requirements.txt
+# macOS/Linux
+source .venv/bin/activate
+# OR Windows
+.venv\Scripts\activate
 ```
 
 4. **Initialize database**
@@ -270,7 +265,7 @@ This runs all three checkers in order: Black → Flake8 → mypy
 Automatically formats code to PEP 8 standard.
 
 ```bash
-python -m black app etl scraper metrics --line-length 100
+uv run black app etl scraper metrics --line-length 100
 ```
 
 **What it fixes**:
@@ -285,7 +280,7 @@ python -m black app etl scraper metrics --line-length 100
 Checks for style violations and potential bugs.
 
 ```bash
-python -m flake8 app etl scraper metrics --max-line-length 100
+uv run flake8 app etl scraper metrics --max-line-length 100
 ```
 
 **Common issues detected**:
@@ -309,7 +304,7 @@ extend-ignore = E203, W503, E501, E701, E704
 Validates type hints for correctness.
 
 ```bash
-python -m mypy app etl scraper metrics --ignore-missing-imports
+uv run mypy app etl scraper metrics --ignore-missing-imports
 ```
 
 **What it checks**:
@@ -386,7 +381,7 @@ def test_my_function_with_invalid_input():
 
 Run tests:
 ```bash
-pytest tests/test_my_feature.py -v
+uv run pytest tests/test_my_feature.py -v
 ```
 
 ---

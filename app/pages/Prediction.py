@@ -29,7 +29,7 @@ st.title("🔮 レース予測")
 st.markdown("機械学習を使用したレース結果の予測分析")
 
 # ナビゲーションメニュー
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     if st.button("🏇 競馬データ", use_container_width=True):
@@ -40,6 +40,10 @@ with col2:
         pass
 
 with col3:
+    if st.button("📅 将来レース", use_container_width=True):
+        st.switch_page("pages/FutureRaces.py")
+
+with col4:
     if st.button("📊 エクスポート", use_container_width=True):
         st.switch_page("pages/DataExport.py")
 

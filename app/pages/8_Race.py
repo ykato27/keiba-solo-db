@@ -92,6 +92,7 @@ st.markdown("---")
 # ========================
 
 from app.sidebar_utils import render_sidebar
+
 render_sidebar()
 
 st.markdown(f"**出走馬数**: {len(entries)}")
@@ -194,7 +195,9 @@ else:
 
                     # 馬詳細へのリンク
                     st.markdown("---")
-                    if st.button(f"🔗 {selected_horse_name} の詳細ページへ", key=f"horse_detail_{horse_id}"):
+                    if st.button(
+                        f"🔗 {selected_horse_name} の詳細ページへ", key=f"horse_detail_{horse_id}"
+                    ):
                         st.session_state.selected_horse_id = horse_id
                         st.switch_page("pages/Horse.py")
 

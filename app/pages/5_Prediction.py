@@ -71,6 +71,7 @@ st.markdown("---")
 # ========================
 
 from app.sidebar_utils import render_sidebar
+
 render_sidebar()
 
 # ========================
@@ -83,7 +84,7 @@ st.subheader("📊 予測モデルの選択")
 model_choice = st.radio(
     "使用するモデルを選択",
     options=["LightGBM（推奨）", "ランダムフォレスト"],
-    help="LightGBMの方が高精度ですが、データ量が多い場合に有効です"
+    help="LightGBMの方が高精度ですが、データ量が多い場合に有効です",
 )
 
 st.markdown("---")
@@ -102,14 +103,14 @@ model_info = model.get_model_info()
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    status = "✅ 訓練済み" if model_info['is_trained'] else "⚠️ 未訓練"
+    status = "✅ 訓練済み" if model_info["is_trained"] else "⚠️ 未訓練"
     st.metric("ステータス", status)
 
 with col2:
-    st.metric("モデル", model_info.get('model_type', model_type_display))
+    st.metric("モデル", model_info.get("model_type", model_type_display))
 
 with col3:
-    st.metric("特徴量数", model_info['n_features'])
+    st.metric("特徴量数", model_info["n_features"])
 
 with col4:
     st.metric("バージョン", "v2.0（改善版）")
@@ -117,7 +118,7 @@ with col4:
 st.markdown("---")
 
 # モデルの訓練
-if not model_info['is_trained']:
+if not model_info["is_trained"]:
     st.warning("⚠️ 選択したモデルがまだ訓練されていません")
 
     if st.button("🚀 モデルを訓練する", use_container_width=True, type="primary"):
@@ -134,7 +135,7 @@ if not model_info['is_trained']:
 
                     # クラス重み付け
                     st.write(f"⚖️ クラス重み付け（不均衡対策）:")
-                    for cls_id, weight in cv_results['class_weights'].items():
+                    for cls_id, weight in cv_results["class_weights"].items():
                         cls_name = {0: "1着", 1: "2-3着", 2: "その他"}.get(int(cls_id), "不明")
                         st.write(f"  - {cls_name}: {weight:.4f}")
 
@@ -152,7 +153,7 @@ if not model_info['is_trained']:
 
                     # 詳細なFold別情報
                     with st.expander("🔍 Fold別詳細情報"):
-                        for fold_info in cv_results['fold_details']:
+                        for fold_info in cv_results["fold_details"]:
                             st.write(f"**Fold {fold_info['fold']}**")
                             st.write(f"  - 精度: {fold_info['accuracy']:.4f}")
                             st.write(f"  - F1(マクロ): {fold_info['f1_macro']:.4f}")
@@ -170,6 +171,7 @@ if not model_info['is_trained']:
                 status.update(label="❌ エラー", state="error")
                 st.error(f"訓練エラー: {e}")
                 import traceback
+
                 st.code(traceback.format_exc())
 
     st.stop()
@@ -186,11 +188,9 @@ if model_choice == "LightGBM（推奨）":
 
             # グラフ表示
             import pandas as pd
-            df_importance = pd.DataFrame({
-                '特徴量': feature_names,
-                '重要度': feature_values
-            })
-            st.bar_chart(df_importance.set_index('特徴量'))
+
+            df_importance = pd.DataFrame({"特徴量": feature_names, "重要度": feature_values})
+            st.bar_chart(df_importance.set_index("特徴量"))
 
             # テーブル表示
             st.dataframe(df_importance, use_container_width=True, hide_index=True)
@@ -234,7 +234,9 @@ if not races:
     st.stop()
 
 race_options = {
-    race['race_id']: f"R{race['race_no']} - {race.get('title', '無題')} ({race['distance_m']}m / {race['surface']})"
+    race[
+        "race_id"
+    ]: f"R{race['race_no']} - {race.get('title', '無題')} ({race['distance_m']}m / {race['surface']})"
     for race in races
 }
 
@@ -258,18 +260,22 @@ if st.button("🔮 予測を実行", use_container_width=True, type="primary"):
         st.error("出走馬情報が見つかりません")
         st.stop()
 
-    horse_ids = [e['horse_id'] for e in entries if e['horse_id']]
+    horse_ids = [e["horse_id"] for e in entries if e["horse_id"]]
 
     if not horse_ids:
         st.error("有効な馬IDが見つかりません")
         st.stop()
 
     # レース情報を取得
-    race = next((r for r in races if r['race_id'] == selected_race_id), None)
-    race_info = {
-        'distance_m': race.get('distance_m') if race else 0,
-        'surface': race.get('surface') if race else '',
-    } if race else None
+    race = next((r for r in races if r["race_id"] == selected_race_id), None)
+    race_info = (
+        {
+            "distance_m": race.get("distance_m") if race else 0,
+            "surface": race.get("surface") if race else "",
+        }
+        if race
+        else None
+    )
 
     # 予測実行
     with st.status("予測中...", expanded=True) as status:
@@ -278,17 +284,17 @@ if st.button("🔮 予測を実行", use_container_width=True, type="primary"):
         status.update(label="✅ 完了!", state="complete")
 
     # 予測結果表示
-    if 'predictions' in prediction_results:
-        predictions = prediction_results['predictions']
+    if "predictions" in prediction_results:
+        predictions = prediction_results["predictions"]
 
         st.subheader("📋 予測結果")
 
         # モデルの使用情報表示
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("使用モデル", prediction_results.get('model_type', 'Unknown'))
+            st.metric("使用モデル", prediction_results.get("model_type", "Unknown"))
         with col2:
-            st.metric("分析対象数", prediction_results.get('total_horses', len(predictions)))
+            st.metric("分析対象数", prediction_results.get("total_horses", len(predictions)))
         with col3:
             st.metric("ランク", f"Top {len(predictions)}")
 
@@ -297,14 +303,16 @@ if st.button("🔮 予測を実行", use_container_width=True, type="primary"):
         # テーブル表示用データ
         table_data = []
         for rank, pred in enumerate(predictions, 1):
-            table_data.append({
-                "順位": f"#{rank}",
-                "馬名": pred['horse_name'],
-                "1着の可能性": f"{pred['win_probability']:.1f}%",
-                "2-3着の可能性": f"{pred['place_probability']:.1f}%",
-                "その他": f"{pred['other_probability']:.1f}%",
-                "確度": f"{pred['confidence']:.1f}%",
-            })
+            table_data.append(
+                {
+                    "順位": f"#{rank}",
+                    "馬名": pred["horse_name"],
+                    "1着の可能性": f"{pred['win_probability']:.1f}%",
+                    "2-3着の可能性": f"{pred['place_probability']:.1f}%",
+                    "その他": f"{pred['other_probability']:.1f}%",
+                    "確度": f"{pred['confidence']:.1f}%",
+                }
+            )
 
         st.dataframe(table_data, use_container_width=True, hide_index=True)
 
@@ -317,30 +325,21 @@ if st.button("🔮 予測を実行", use_container_width=True, type="primary"):
 
         with tab1:
             st.bar_chart(
-                {
-                    pred['horse_name']: pred['win_probability']
-                    for pred in predictions[:10]
-                },
+                {pred["horse_name"]: pred["win_probability"] for pred in predictions[:10]},
                 height=400,
             )
             st.caption("1着の可能性が高い上位10頭")
 
         with tab2:
             st.bar_chart(
-                {
-                    pred['horse_name']: pred['place_probability']
-                    for pred in predictions[:10]
-                },
+                {pred["horse_name"]: pred["place_probability"] for pred in predictions[:10]},
                 height=400,
             )
             st.caption("2-3着の可能性が高い上位10頭")
 
         with tab3:
             st.bar_chart(
-                {
-                    pred['horse_name']: pred['confidence']
-                    for pred in predictions[:10]
-                },
+                {pred["horse_name"]: pred["confidence"] for pred in predictions[:10]},
                 height=400,
             )
             st.caption("予測の確度が高い上位10頭")
@@ -356,26 +355,20 @@ st.markdown("---")
 
 st.subheader("📊 バックテスト（過去レースで的中率測定）")
 
-st.markdown("""
+st.markdown(
+    """
 選択したモデルを過去のレースで実行し、実際の着順と比較して的中率を計測します。
-""")
+"""
+)
 
 # バックテスト設定
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    backtest_start_date = st.date_input(
-        "開始日",
-        value=None,
-        help="バックテスト対象期間の開始日"
-    )
+    backtest_start_date = st.date_input("開始日", value=None, help="バックテスト対象期間の開始日")
 
 with col2:
-    backtest_end_date = st.date_input(
-        "終了日",
-        value=None,
-        help="バックテスト対象期間の終了日"
-    )
+    backtest_end_date = st.date_input("終了日", value=None, help="バックテスト対象期間の終了日")
 
 with col3:
     max_sample_races = st.number_input(
@@ -384,7 +377,7 @@ with col3:
         max_value=500,
         value=100,
         step=10,
-        help="バックテスト対象とするレース数"
+        help="バックテスト対象とするレース数",
     )
 
 if st.button("▶️ バックテストを実行", use_container_width=True, type="secondary"):
@@ -405,7 +398,7 @@ if st.button("▶️ バックテストを実行", use_container_width=True, typ
                     backtest_results = bt_runner.run_backtest(
                         start_date=backtest_start_date.strftime("%Y-%m-%d"),
                         end_date=backtest_end_date.strftime("%Y-%m-%d"),
-                        sample_races=max_sample_races
+                        sample_races=max_sample_races,
                     )
 
                     status.update(label="✅ 完了!", state="complete")
@@ -415,20 +408,11 @@ if st.button("▶️ バックテストを実行", use_container_width=True, typ
 
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric(
-                            "対象レース数",
-                            backtest_results['total_races']
-                        )
+                        st.metric("対象レース数", backtest_results["total_races"])
                     with col2:
-                        st.metric(
-                            "総予測数",
-                            backtest_results['total_predictions']
-                        )
+                        st.metric("総予測数", backtest_results["total_predictions"])
                     with col3:
-                        st.metric(
-                            "期間",
-                            backtest_results['date_range']
-                        )
+                        st.metric("期間", backtest_results["date_range"])
 
                     st.markdown("---")
 
@@ -440,7 +424,7 @@ if st.button("▶️ バックテストを実行", use_container_width=True, typ
                         st.metric(
                             "1着的中数",
                             f"{backtest_results['win_hits']}",
-                            f"{backtest_results['win_accuracy']:.2f}%"
+                            f"{backtest_results['win_accuracy']:.2f}%",
                         )
 
                     with col2:
@@ -448,7 +432,7 @@ if st.button("▶️ バックテストを実行", use_container_width=True, typ
                         st.metric(
                             "2-3着的中数",
                             f"{backtest_results['place_hits']}",
-                            f"{backtest_results['place_accuracy']:.2f}%"
+                            f"{backtest_results['place_accuracy']:.2f}%",
                         )
 
                     st.markdown("---")
@@ -460,28 +444,22 @@ if st.button("▶️ バックテストを実行", use_container_width=True, typ
 
                     with col1:
                         assumed_odds_win = st.number_input(
-                            "仮定する1着オッズ",
-                            min_value=1.0,
-                            value=5.0,
-                            step=0.5
+                            "仮定する1着オッズ", min_value=1.0, value=5.0, step=0.5
                         )
 
                     with col2:
                         assumed_odds_place = st.number_input(
-                            "仮定する複勝オッズ",
-                            min_value=1.0,
-                            value=2.0,
-                            step=0.1
+                            "仮定する複勝オッズ", min_value=1.0, value=2.0, step=0.1
                         )
 
                     # 期待値を計算
                     ev_results = bt_runner.calculate_expected_value(
                         backtest_results,
                         assumed_odds_win=assumed_odds_win,
-                        assumed_odds_place=assumed_odds_place
+                        assumed_odds_place=assumed_odds_place,
                     )
 
-                    if 'error' not in ev_results:
+                    if "error" not in ev_results:
                         col1, col2 = st.columns(2)
 
                         with col1:
@@ -489,7 +467,7 @@ if st.button("▶️ バックテストを実行", use_container_width=True, typ
                             st.metric(
                                 "勝率",
                                 f"{ev_results['win_win_rate']:.2%}",
-                                f"EV: {ev_results['win_expected_value']:.3f}"
+                                f"EV: {ev_results['win_expected_value']:.3f}",
                             )
 
                         with col2:
@@ -497,19 +475,27 @@ if st.button("▶️ バックテストを実行", use_container_width=True, typ
                             st.metric(
                                 "的中率",
                                 f"{ev_results['place_hit_rate']:.2%}",
-                                f"EV: {ev_results['place_expected_value']:.3f}"
+                                f"EV: {ev_results['place_expected_value']:.3f}",
                             )
 
                         st.info(f"💡 {ev_results['recommendation']}")
 
                     # 詳細レース情報
                     with st.expander("🔍 レース別詳細"):
-                        for race_detail in backtest_results['race_details'][:10]:
-                            st.write(f"**{race_detail['race_date']} {race_detail['course']} ({race_detail['distance_m']}m)**")
+                        for race_detail in backtest_results["race_details"][:10]:
+                            st.write(
+                                f"**{race_detail['race_date']} {race_detail['course']} ({race_detail['distance_m']}m)**"
+                            )
 
-                            for hit in race_detail['hits']:
-                                status_emoji = "✅" if hit['is_win_hit'] else ("🟢" if hit['is_place_hit'] else "❌")
-                                st.write(f"{status_emoji} {hit['horse_name']}: 予想{hit['predicted_rank']}位 → 実際{hit['actual_finish']}位")
+                            for hit in race_detail["hits"]:
+                                status_emoji = (
+                                    "✅"
+                                    if hit["is_win_hit"]
+                                    else ("🟢" if hit["is_place_hit"] else "❌")
+                                )
+                                st.write(
+                                    f"{status_emoji} {hit['horse_name']}: 予想{hit['predicted_rank']}位 → 実際{hit['actual_finish']}位"
+                                )
 
                             st.divider()
                 else:
@@ -519,6 +505,7 @@ if st.button("▶️ バックテストを実行", use_container_width=True, typ
                 status.update(label="❌ エラー", state="error")
                 st.error(f"バックテストエラー: {e}")
                 import traceback
+
                 st.code(traceback.format_exc())
 
 st.markdown("---")

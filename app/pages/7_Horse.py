@@ -94,6 +94,7 @@ st.markdown("---")
 # ========================
 
 from app.sidebar_utils import render_sidebar
+
 render_sidebar()
 
 # ========================
@@ -150,14 +151,11 @@ if history:
         st.plotly_chart(fig, use_container_width=True)
 
         st.caption(
-            "💡 近走指数は最近のレース成績を基に計算されます。"
-            "古いレースほど重みが低くなります。"
+            "💡 近走指数は最近のレース成績を基に計算されます。" "古いレースほど重みが低くなります。"
         )
 
     with tab2:
-        fig = charts.create_distance_preference_chart(
-            horse_details.get("distance_pref", "{}")
-        )
+        fig = charts.create_distance_preference_chart(horse_details.get("distance_pref", "{}"))
         st.plotly_chart(fig, use_container_width=True)
 
         st.caption(
@@ -166,9 +164,7 @@ if history:
         )
 
     with tab3:
-        fig = charts.create_surface_preference_chart(
-            horse_details.get("surface_pref", "{}")
-        )
+        fig = charts.create_surface_preference_chart(horse_details.get("surface_pref", "{}"))
         st.plotly_chart(fig, use_container_width=True)
 
         st.caption(

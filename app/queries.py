@@ -25,9 +25,7 @@ def get_all_race_dates() -> List[str]:
     try:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT DISTINCT race_date FROM races ORDER BY race_date DESC"
-        )
+        cursor.execute("SELECT DISTINCT race_date FROM races ORDER BY race_date DESC")
         dates = [row[0] for row in cursor.fetchall()]
         return dates
     finally:

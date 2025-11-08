@@ -31,13 +31,13 @@ def export_race_entries_to_csv(race_id: int) -> str:
     df = pd.DataFrame(entries)
 
     # 不要なカラムを削除
-    drop_cols = [col for col in df.columns if col in ['created_at', 'updated_at']]
+    drop_cols = [col for col in df.columns if col in ["created_at", "updated_at"]]
     if drop_cols:
         df = df.drop(columns=drop_cols)
 
     # CSV形式に変換
     csv_buffer = io.StringIO()
-    df.to_csv(csv_buffer, index=False, encoding='cp932')
+    df.to_csv(csv_buffer, index=False, encoding="cp932")
 
     return csv_buffer.getvalue()
 
@@ -87,7 +87,7 @@ def export_all_races_to_csv(start_date: str = None, end_date: str = None) -> str
 
     # CSV形式に変換
     csv_buffer = io.StringIO()
-    df.to_csv(csv_buffer, index=False, encoding='cp932')
+    df.to_csv(csv_buffer, index=False, encoding="cp932")
 
     return csv_buffer.getvalue()
 
@@ -105,7 +105,8 @@ def export_training_features_to_csv() -> str:
     cursor = conn.cursor()
 
     # 着順が記録されているエントリを取得
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT DISTINCT
             e.entry_id,
             e.horse_id,
@@ -142,7 +143,8 @@ def export_training_features_to_csv() -> str:
         WHERE e.finish_pos IS NOT NULL AND e.finish_pos > 0
         ORDER BY r.race_date ASC
         LIMIT 5000
-    """)
+    """
+    )
 
     entries = cursor.fetchall()
     columns = [description[0] for description in cursor.description]
@@ -160,43 +162,41 @@ def export_training_features_to_csv() -> str:
         try:
             # 馬の詳細情報を構築
             horse_details = {
-                'horse_id': entry_dict['horse_id'],
-                'raw_name': entry_dict['horse_name'],
-                'sex': entry_dict['sex'],
-                'birth_year': entry_dict['birth_year'],
-                'races_count': entry_dict['races_count'],
-                'win_rate': entry_dict['win_rate'],
-                'place_rate': entry_dict['place_rate'],
-                'show_rate': entry_dict['show_rate'],
-                'recent_score': entry_dict['recent_score'],
-                'distance_pref': entry_dict['distance_pref'],
-                'surface_pref': entry_dict['surface_pref'],
+                "horse_id": entry_dict["horse_id"],
+                "raw_name": entry_dict["horse_name"],
+                "sex": entry_dict["sex"],
+                "birth_year": entry_dict["birth_year"],
+                "races_count": entry_dict["races_count"],
+                "win_rate": entry_dict["win_rate"],
+                "place_rate": entry_dict["place_rate"],
+                "show_rate": entry_dict["show_rate"],
+                "recent_score": entry_dict["recent_score"],
+                "distance_pref": entry_dict["distance_pref"],
+                "surface_pref": entry_dict["surface_pref"],
             }
 
             # レース情報を構築
             race_info = {
-                'distance_m': entry_dict['distance_m'],
-                'surface': entry_dict['surface'],
+                "distance_m": entry_dict["distance_m"],
+                "surface": entry_dict["surface"],
             }
 
             # 出走情報を構築
             entry_info = {
-                'horse_weight': entry_dict['horse_weight'] or 450,
-                'weight_carried': entry_dict['weight_carried'] or 54,
-                'days_since_last_race': entry_dict['days_since_last_race'] or 14,
-                'is_steeplechase': entry_dict['is_steeplechase'] or 0,
-                'age': entry_dict['age'] or 4,
+                "horse_weight": entry_dict["horse_weight"] or 450,
+                "weight_carried": entry_dict["weight_carried"] or 54,
+                "days_since_last_race": entry_dict["days_since_last_race"] or 14,
+                "is_steeplechase": entry_dict["is_steeplechase"] or 0,
+                "age": entry_dict["age"] or 4,
             }
 
             # 特徴量を抽出
             features_dict = feat_module.extract_features_for_horse(
-                horse_details,
-                race_info=race_info,
-                entry_info=entry_info
+                horse_details, race_info=race_info, entry_info=entry_info
             )
 
             # ターゲット変数を追加
-            finish_pos = entry_dict['finish_pos']
+            finish_pos = entry_dict["finish_pos"]
             if finish_pos == 1:
                 target = 0
             elif finish_pos in (2, 3):
@@ -206,17 +206,17 @@ def export_training_features_to_csv() -> str:
 
             # 基本情報 + 特徴量 + ターゲット
             row = {
-                'entry_id': entry_dict['entry_id'],
-                'horse_id': entry_dict['horse_id'],
-                'horse_name': entry_dict['horse_name'],
-                'race_date': entry_dict['race_date'],
-                'race_id': entry_dict['race_id'],
-                'distance_m': entry_dict['distance_m'],
-                'surface': entry_dict['surface'],
-                'finish_pos': finish_pos,
-                'target': target,
-                'target_label': ['1着', '2-3着', 'その他'][target],
-                **features_dict
+                "entry_id": entry_dict["entry_id"],
+                "horse_id": entry_dict["horse_id"],
+                "horse_name": entry_dict["horse_name"],
+                "race_date": entry_dict["race_date"],
+                "race_id": entry_dict["race_id"],
+                "distance_m": entry_dict["distance_m"],
+                "surface": entry_dict["surface"],
+                "finish_pos": finish_pos,
+                "target": target,
+                "target_label": ["1着", "2-3着", "その他"][target],
+                **features_dict,
             }
 
             feature_rows.append(row)
@@ -233,7 +233,7 @@ def export_training_features_to_csv() -> str:
 
     # CSV形式に変換
     csv_buffer = io.StringIO()
-    df.to_csv(csv_buffer, index=False, encoding='cp932')
+    df.to_csv(csv_buffer, index=False, encoding="cp932")
 
     return csv_buffer.getvalue()
 
@@ -250,7 +250,8 @@ def export_horse_metrics_to_csv() -> str:
     conn = db.get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             hm.horse_id,
             h.raw_name as horse_name,
@@ -267,7 +268,8 @@ def export_horse_metrics_to_csv() -> str:
         FROM horse_metrics hm
         JOIN horses h ON hm.horse_id = h.horse_id
         ORDER BY hm.recent_score DESC
-    """)
+    """
+    )
 
     metrics = cursor.fetchall()
     columns = [description[0] for description in cursor.description]
@@ -281,12 +283,14 @@ def export_horse_metrics_to_csv() -> str:
 
     # CSV形式に変換
     csv_buffer = io.StringIO()
-    df.to_csv(csv_buffer, index=False, encoding='cp932')
+    df.to_csv(csv_buffer, index=False, encoding="cp932")
 
     return csv_buffer.getvalue()
 
 
-def export_entry_details_to_csv(race_id: int = None, start_date: str = None, end_date: str = None) -> str:
+def export_entry_details_to_csv(
+    race_id: int = None, start_date: str = None, end_date: str = None
+) -> str:
     """
     出走情報の詳細データをCSV形式でエクスポート
 
@@ -433,12 +437,13 @@ def export_entry_details_to_csv(race_id: int = None, start_date: str = None, end
 
         # CSV形式に変換
         csv_buffer = io.StringIO()
-        df.to_csv(csv_buffer, index=False, encoding='cp932')
+        df.to_csv(csv_buffer, index=False, encoding="cp932")
 
         return csv_buffer.getvalue()
 
     except Exception as e:
         print(f"Error in export_entry_details_to_csv: {e}")
         import traceback
+
         traceback.print_exc()
         return ""

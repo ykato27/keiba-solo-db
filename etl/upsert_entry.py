@@ -112,9 +112,7 @@ class EntryUpsert(ETLBase):
                     count += 1
 
                 except Exception as e:
-                    logger.warning(
-                        f"出走情報の登録に失敗: {entry.get('horse_name')} - {e}"
-                    )
+                    logger.warning(f"出走情報の登録に失敗: {entry.get('horse_name')} - {e}")
                     continue
 
             conn.commit()

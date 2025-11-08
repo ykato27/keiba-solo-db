@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from app import queries, db
 from etl import upsert_race, upsert_entry, apply_alias
 from metrics import build_horse_metrics
+
 # 直接import（キャッシュ問題回避）
 from scraper.fetch_future_races import fetch_upcoming_races, fetch_multiple_race_cards
 
@@ -78,6 +79,7 @@ st.markdown("---")
 # ========================
 
 from app.sidebar_utils import render_sidebar
+
 render_sidebar()
 
 # ========================
@@ -92,7 +94,7 @@ with col1:
     data_scope = st.radio(
         "データ範囲",
         options=["将来レース（スクレイピング）", "過去3年分"],
-        help="取得するレースの範囲を選択"
+        help="取得するレースの範囲を選択",
     )
 
     if data_scope == "将来レース（スクレイピング）":
@@ -101,7 +103,7 @@ with col1:
             min_value=1,
             max_value=30,
             value=14,
-            help="今日から指定日数先までのレースを取得します"
+            help="今日から指定日数先までのレースを取得します",
         )
     else:
         years_back = st.slider(
@@ -109,7 +111,7 @@ with col1:
             min_value=1,
             max_value=5,
             value=3,
-            help="過去N年分のレースデータを取得します"
+            help="過去N年分のレースデータを取得します",
         )
         days_ahead = years_back * 365
 
@@ -125,7 +127,7 @@ with col3:
     use_mock = st.checkbox(
         "テストモードを使用",
         value=False,
-        help="JRA公式サイトへのアクセスが失敗する場合、モックデータでテストできます"
+        help="JRA公式サイトへのアクセスが失敗する場合、モックデータでテストできます",
     )
     if use_mock:
         st.warning("⚠️ テストモード：本番データではなくモックデータを使用します")
@@ -139,7 +141,11 @@ st.markdown("---")
 st.subheader("🔄 スクレイピング実行")
 
 # ボタンラベルをデータ範囲に応じて変更
-button_label = "📥 将来レース情報を取得" if data_scope == "将来レース（スクレイピング）" else "📥 過去3年分のレース情報を取得"
+button_label = (
+    "📥 将来レース情報を取得"
+    if data_scope == "将来レース（スクレイピング）"
+    else "📥 過去3年分のレース情報を取得"
+)
 
 if st.button(button_label, type="primary", use_container_width=True):
     with st.status("レース情報を取得中...", expanded=True) as status:
@@ -151,18 +157,14 @@ if st.button(button_label, type="primary", use_container_width=True):
                 else:
                     st.write(f"📊 JRA公式サイトから {days_ahead} 日先までのレース情報を取得中...")
 
-                upcoming_races = fetch_upcoming_races(
-                    days_ahead=days_ahead,
-                    use_mock=use_mock
-                )
+                upcoming_races = fetch_upcoming_races(days_ahead=days_ahead, use_mock=use_mock)
             else:
                 # 過去のレースを取得（現在はモックデータを使用）
                 st.write(f"📊 過去 {years_back} 年分のレース情報を取得中...")
 
                 # 過去データの場合はモックを使用（実際のスクレイピングは複雑なため）
                 upcoming_races = fetch_upcoming_races(
-                    days_ahead=days_ahead,
-                    use_mock=True  # 過去データは常にモックを使用
+                    days_ahead=days_ahead, use_mock=True  # 過去データは常にモックを使用
                 )
 
             if not upcoming_races:
@@ -181,12 +183,14 @@ if st.button(button_label, type="primary", use_container_width=True):
             st.write("**取得したレース:**")
             races_df_data = []
             for race in upcoming_races[:10]:
-                races_df_data.append({
-                    "日付": race.get('race_date'),
-                    "レース名": race.get('title'),
-                    "レースID": race.get('race_id'),
-                    "日数": race.get('days_from_today'),
-                })
+                races_df_data.append(
+                    {
+                        "日付": race.get("race_date"),
+                        "レース名": race.get("title"),
+                        "レースID": race.get("race_id"),
+                        "日数": race.get("days_from_today"),
+                    }
+                )
 
             st.dataframe(races_df_data, use_container_width=True, hide_index=True)
 
@@ -198,7 +202,7 @@ if st.button(button_label, type="primary", use_container_width=True):
 
             try:
                 # 出馬表を全レース取得（出馬表がある場合）
-                all_race_ids = [r['race_id'] for r in upcoming_races if r.get('race_id')]
+                all_race_ids = [r["race_id"] for r in upcoming_races if r.get("race_id")]
 
                 if all_race_ids:
                     # 出馬表取得のためのレース選択（オプション）
@@ -208,7 +212,7 @@ if st.button(button_label, type="primary", use_container_width=True):
                         "レースを選択",
                         options=[f"{r['race_date']} - {r['title']}" for r in upcoming_races],
                         help="出馬表（出走馬情報）を取得するレースを選択してください。選択しない場合はレース情報のみ登録します。",
-                        key="race_selector"
+                        key="race_selector",
                     )
 
                     race_cards = []
@@ -218,19 +222,21 @@ if st.button(button_label, type="primary", use_container_width=True):
                         for selected in selected_races:
                             for race in upcoming_races:
                                 if f"{race['race_date']} - {race['title']}" == selected:
-                                    selected_race_ids.append(race['race_id'])
+                                    selected_race_ids.append(race["race_id"])
                                     break
 
-                        if st.button("🐴 出馬表を取得して登録", type="secondary", use_container_width=True):
+                        if st.button(
+                            "🐴 出馬表を取得して登録", type="secondary", use_container_width=True
+                        ):
                             st.write(f"📋 {len(selected_race_ids)} 件のレースの出馬表を取得中...")
                             race_cards = fetch_multiple_race_cards(selected_race_ids)
-                            total_entries = sum(len(card.get('entries', [])) for card in race_cards)
+                            total_entries = sum(len(card.get("entries", [])) for card in race_cards)
                             st.write(f"✅ {total_entries} 頭の出走馬情報を取得しました")
 
                 # レース基本情報をデータベースに登録（常に実施）
                 races_for_db = []
                 for race in upcoming_races:
-                    race_id = race.get('race_id')
+                    race_id = race.get("race_id")
                     if race_id:
                         # race_idから情報を抽出
                         year = int(race_id[0:4])
@@ -238,14 +244,16 @@ if st.button(button_label, type="primary", use_container_width=True):
                         day = int(race_id[6:8])
                         race_date = f"{year:04d}-{month:02d}-{day:02d}"
 
-                        races_for_db.append({
-                            'race_date': race_date,
-                            'course': '未取得',
-                            'race_no': 0,
-                            'distance_m': 0,
-                            'surface': '未取得',
-                            'title': race.get('title', f'レース {race_id}'),
-                        })
+                        races_for_db.append(
+                            {
+                                "race_date": race_date,
+                                "course": "未取得",
+                                "race_no": 0,
+                                "distance_m": 0,
+                                "surface": "未取得",
+                                "title": race.get("title", f"レース {race_id}"),
+                            }
+                        )
 
                 if races_for_db:
                     upsert_race.RaceUpsert().upsert_races(races_for_db)
@@ -255,26 +263,29 @@ if st.button(button_label, type="primary", use_container_width=True):
                 if race_cards:
                     all_entries = []
                     for card in race_cards:
-                        race_id = card.get('race_id')
-                        entries = card.get('entries', [])
+                        race_id = card.get("race_id")
+                        entries = card.get("entries", [])
 
                         for entry in entries:
-                            entry['race_id'] = race_id
+                            entry["race_id"] = race_id
                             all_entries.append(entry)
 
                     if all_entries:
                         # 馬情報を登録
                         horses_to_register = []
                         for entry in all_entries:
-                            if entry.get('horse_name'):
-                                horses_to_register.append({
-                                    'raw_name': entry['horse_name'],
-                                    'sex': '不明',
-                                    'birth_year': 2020,
-                                })
+                            if entry.get("horse_name"):
+                                horses_to_register.append(
+                                    {
+                                        "raw_name": entry["horse_name"],
+                                        "sex": "不明",
+                                        "birth_year": 2020,
+                                    }
+                                )
 
                         if horses_to_register:
                             from etl import upsert_master
+
                             upsert_master.MasterDataUpsert().upsert_horses(horses_to_register)
 
                         # 出走情報を登録

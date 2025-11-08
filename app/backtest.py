@@ -39,14 +39,14 @@ class BacktestRunner:
             バックテスト結果
         """
         results = {
-            'total_races': 0,
-            'total_predictions': 0,
-            'win_hits': 0,          # 1着予測的中
-            'win_accuracy': 0,
-            'place_hits': 0,        # 2-3着予測的中
-            'place_accuracy': 0,
-            'race_details': [],
-            'date_range': f"{start_date} ～ {end_date}",
+            "total_races": 0,
+            "total_predictions": 0,
+            "win_hits": 0,  # 1着予測的中
+            "win_accuracy": 0,
+            "place_hits": 0,  # 2-3着予測的中
+            "place_accuracy": 0,
+            "race_details": [],
+            "date_range": f"{start_date} ～ {end_date}",
         }
 
         try:
@@ -78,7 +78,7 @@ class BacktestRunner:
             else:
                 races = all_races
 
-            results['total_races'] = len(races)
+            results["total_races"] = len(races)
 
             # 各レースで予測実行
             for race_idx, race in enumerate(races):
@@ -90,53 +90,49 @@ class BacktestRunner:
                 if not entries or len(entries) < 2:
                     continue
 
-                horse_ids = [e['horse_id'] for e in entries if e['horse_id']]
+                horse_ids = [e["horse_id"] for e in entries if e["horse_id"]]
                 if not horse_ids:
                     continue
 
                 # レース情報
                 race_info = {
-                    'distance_m': distance,
-                    'surface': surface,
+                    "distance_m": distance,
+                    "surface": surface,
                 }
 
                 try:
                     # 予測実行
                     prediction_results = self.model.predict_race_order(
-                        horse_ids,
-                        race_info=race_info
+                        horse_ids, race_info=race_info
                     )
 
-                    if 'predictions' not in prediction_results:
+                    if "predictions" not in prediction_results:
                         continue
 
-                    predictions = prediction_results['predictions']
-                    results['total_predictions'] += len(predictions)
+                    predictions = prediction_results["predictions"]
+                    results["total_predictions"] += len(predictions)
 
                     # 実際の着順と比較
                     race_detail = {
-                        'race_id': race_id,
-                        'race_date': race_date,
-                        'course': course,
-                        'distance_m': distance,
-                        'predictions': [],
-                        'hits': [],
+                        "race_id": race_id,
+                        "race_date": race_date,
+                        "course": course,
+                        "distance_m": distance,
+                        "predictions": [],
+                        "hits": [],
                     }
 
                     for rank, pred in enumerate(predictions, 1):
-                        horse_id = pred['horse_id']
-                        horse_name = pred['horse_name']
+                        horse_id = pred["horse_id"]
+                        horse_name = pred["horse_name"]
 
                         # 実際の着順を取得
-                        actual_entry = next(
-                            (e for e in entries if e['horse_id'] == horse_id),
-                            None
-                        )
+                        actual_entry = next((e for e in entries if e["horse_id"] == horse_id), None)
 
                         if not actual_entry:
                             continue
 
-                        actual_finish = actual_entry.get('finish_pos')
+                        actual_finish = actual_entry.get("finish_pos")
 
                         if actual_finish is None or actual_finish <= 0:
                             # 着順なし（未出走など）
@@ -147,28 +143,32 @@ class BacktestRunner:
                         is_place_hit = actual_finish in (1, 2, 3)
 
                         if is_win_hit:
-                            results['win_hits'] += 1
+                            results["win_hits"] += 1
 
                         if is_place_hit:
-                            results['place_hits'] += 1
+                            results["place_hits"] += 1
 
-                        race_detail['predictions'].append({
-                            'rank': rank,
-                            'horse_name': horse_name,
-                            'predicted_win_prob': pred['win_probability'],
-                            'actual_finish': actual_finish,
-                        })
+                        race_detail["predictions"].append(
+                            {
+                                "rank": rank,
+                                "horse_name": horse_name,
+                                "predicted_win_prob": pred["win_probability"],
+                                "actual_finish": actual_finish,
+                            }
+                        )
 
-                        race_detail['hits'].append({
-                            'horse_name': horse_name,
-                            'is_win_hit': is_win_hit,
-                            'is_place_hit': is_place_hit,
-                            'predicted_rank': rank,
-                            'actual_finish': actual_finish,
-                        })
+                        race_detail["hits"].append(
+                            {
+                                "horse_name": horse_name,
+                                "is_win_hit": is_win_hit,
+                                "is_place_hit": is_place_hit,
+                                "predicted_rank": rank,
+                                "actual_finish": actual_finish,
+                            }
+                        )
 
-                    if race_detail['hits']:
-                        results['race_details'].append(race_detail)
+                    if race_detail["hits"]:
+                        results["race_details"].append(race_detail)
 
                 except Exception as e:
                     print(f"レース {race_id} でのバックテスト失敗: {e}")
@@ -177,12 +177,10 @@ class BacktestRunner:
             conn.close()
 
             # 精度計算
-            if results['total_predictions'] > 0:
-                results['win_accuracy'] = (
-                    results['win_hits'] / results['total_predictions'] * 100
-                )
-                results['place_accuracy'] = (
-                    results['place_hits'] / results['total_predictions'] * 100
+            if results["total_predictions"] > 0:
+                results["win_accuracy"] = results["win_hits"] / results["total_predictions"] * 100
+                results["place_accuracy"] = (
+                    results["place_hits"] / results["total_predictions"] * 100
                 )
 
             return results
@@ -190,6 +188,7 @@ class BacktestRunner:
         except Exception as e:
             print(f"バックテスト実行エラー: {e}")
             import traceback
+
             traceback.print_exc()
             return results
 
@@ -210,12 +209,12 @@ class BacktestRunner:
         Returns:
             期待値情報
         """
-        total_predictions = backtest_results['total_predictions']
-        win_hits = backtest_results['win_hits']
-        place_hits = backtest_results['place_hits']
+        total_predictions = backtest_results["total_predictions"]
+        win_hits = backtest_results["win_hits"]
+        place_hits = backtest_results["place_hits"]
 
         if total_predictions == 0:
-            return {'error': '予測データがありません'}
+            return {"error": "予測データがありません"}
 
         # 1着予測の期待値
         win_win_rate = win_hits / total_predictions
@@ -226,15 +225,14 @@ class BacktestRunner:
         place_ev = place_hit_rate * assumed_odds_place - 1.0
 
         return {
-            'win_win_rate': win_win_rate,
-            'win_assumed_odds': assumed_odds_win,
-            'win_expected_value': win_ev,
-            'place_hit_rate': place_hit_rate,
-            'place_assumed_odds': assumed_odds_place,
-            'place_expected_value': place_ev,
-            'recommendation': (
-                '👍 期待値が正' if (win_ev > 0 or place_ev > 0)
-                else '❌ 期待値が負（購入非推奨）'
+            "win_win_rate": win_win_rate,
+            "win_assumed_odds": assumed_odds_win,
+            "win_expected_value": win_ev,
+            "place_hit_rate": place_hit_rate,
+            "place_assumed_odds": assumed_odds_place,
+            "place_expected_value": place_ev,
+            "recommendation": (
+                "👍 期待値が正" if (win_ev > 0 or place_ev > 0) else "❌ 期待値が負（購入非推奨）"
             ),
         }
 

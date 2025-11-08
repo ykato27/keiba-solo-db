@@ -15,6 +15,7 @@ import sys
 # lightgbm のインポート（オプション）
 try:
     import lightgbm as lgb
+
     HAS_LIGHTGBM = True
 except ImportError:
     HAS_LIGHTGBM = False
@@ -23,7 +24,13 @@ except ImportError:
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, confusion_matrix, classification_report
+from sklearn.metrics import (
+    accuracy_score,
+    roc_auc_score,
+    f1_score,
+    confusion_matrix,
+    classification_report,
+)
 from sklearn.utils.class_weight import compute_class_weight
 
 # パス設定
@@ -45,7 +52,7 @@ class AdvancedRacePredictionModel:
                 num_leaves=31,
                 learning_rate=0.05,
                 n_estimators=200,
-                objective='multiclass',
+                objective="multiclass",
                 num_class=3,
                 random_state=42,
                 n_jobs=-1,
@@ -77,9 +84,9 @@ class AdvancedRacePredictionModel:
         """保存済みモデルを読み込み"""
         if self.model_path.exists() and self.scaler_path.exists():
             try:
-                with open(self.model_path, 'rb') as f:
+                with open(self.model_path, "rb") as f:
                     self.model = pickle.load(f)
-                with open(self.scaler_path, 'rb') as f:
+                with open(self.scaler_path, "rb") as f:
                     self.scaler = pickle.load(f)
                 self.is_trained = True
             except Exception as e:
@@ -90,9 +97,9 @@ class AdvancedRacePredictionModel:
         """モデルを保存"""
         try:
             self.model_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.model_path, 'wb') as f:
+            with open(self.model_path, "wb") as f:
                 pickle.dump(self.model, f)
-            with open(self.scaler_path, 'wb') as f:
+            with open(self.scaler_path, "wb") as f:
                 pickle.dump(self.scaler, f)
         except Exception as e:
             print(f"モデルの保存に失敗しました: {e}")
@@ -111,6 +118,7 @@ class AdvancedRacePredictionModel:
 
         try:
             from app import db
+
             conn = db.get_connection()
             cursor = conn.cursor()
 
@@ -137,7 +145,17 @@ class AdvancedRacePredictionModel:
             entries = cursor.fetchall()
 
             for entry in entries:
-                horse_id, finish_pos, race_date, distance, surface, horse_weight, days_since, steeplechase, age = entry
+                (
+                    horse_id,
+                    finish_pos,
+                    race_date,
+                    distance,
+                    surface,
+                    horse_weight,
+                    days_since,
+                    steeplechase,
+                    age,
+                ) = entry
 
                 try:
                     horse_details = queries.get_horse_details(horse_id)
@@ -146,24 +164,22 @@ class AdvancedRacePredictionModel:
 
                     # レース情報
                     race_info = {
-                        'distance_m': distance,
-                        'surface': surface,
+                        "distance_m": distance,
+                        "surface": surface,
                     }
 
                     # 出走情報
                     entry_info = {
-                        'horse_weight': horse_weight or 450,
-                        'weight_carried': 54,  # 平均的な斤量
-                        'days_since_last_race': days_since or 14,
-                        'is_steeplechase': steeplechase or 0,
-                        'age': age or 4,
+                        "horse_weight": horse_weight or 450,
+                        "weight_carried": 54,  # 平均的な斤量
+                        "days_since_last_race": days_since or 14,
+                        "is_steeplechase": steeplechase or 0,
+                        "age": age or 4,
                     }
 
                     # 特徴量抽出
                     features_dict = feat_module.extract_features_for_horse(
-                        horse_details,
-                        race_info=race_info,
-                        entry_info=entry_info
+                        horse_details, race_info=race_info, entry_info=entry_info
                     )
                     vector, _ = feat_module.create_feature_vector(features_dict)
 
@@ -203,7 +219,9 @@ class AdvancedRacePredictionModel:
         print(f"デバッグ: 訓練データサイズ = {len(X) if X is not None else 0}")
 
         if X is None or len(X) < 50:
-            raise ValueError(f"訓練データが不足しています（取得件数: {len(X) if X is not None else 0}）")
+            raise ValueError(
+                f"訓練データが不足しています（取得件数: {len(X) if X is not None else 0}）"
+            )
 
         # クラス分布の確認
         unique_classes, class_counts = np.unique(y, return_counts=True)
@@ -214,7 +232,7 @@ class AdvancedRacePredictionModel:
         print(f"  クラス 2（その他）: {class_counts[2] if 2 in unique_classes else 0}")
 
         # クラス重み付けの計算（不均衡対策）
-        class_weights = compute_class_weight('balanced', classes=unique_classes, y=y)
+        class_weights = compute_class_weight("balanced", classes=unique_classes, y=y)
         class_weight_dict = dict(zip(unique_classes, class_weights))
         print(f"クラス重み付け: {class_weight_dict}")
 
@@ -234,7 +252,7 @@ class AdvancedRacePredictionModel:
         )
         DataLeakageValidator.print_validation_report(cv_validation_results)
 
-        if not cv_validation_results['all_valid']:
+        if not cv_validation_results["all_valid"]:
             print("⚠️ 警告: いくつかのFoldでデータリーク検証に失敗しました")
 
         # 再度CV分割を取得（前回の split は消費済み）
@@ -271,16 +289,16 @@ class AdvancedRacePredictionModel:
 
             # 予測確率の取得（可能な場合）
             y_pred_proba = None
-            if hasattr(self.model, 'predict_proba'):
+            if hasattr(self.model, "predict_proba"):
                 y_pred_proba = self.model.predict_proba(X_test_scaled)
 
             accuracy = accuracy_score(y_test, y_pred)
 
             # マクロ平均 F1 スコア（クラス不均衡に強い）
-            f1_macro = f1_score(y_test, y_pred, average='macro', zero_division=0)
+            f1_macro = f1_score(y_test, y_pred, average="macro", zero_division=0)
 
             # 重みづき F1 スコア
-            f1_weighted = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+            f1_weighted = f1_score(y_test, y_pred, average="weighted", zero_division=0)
 
             cv_scores.append(accuracy)
             cv_f1_scores.append(f1_macro)
@@ -294,17 +312,19 @@ class AdvancedRacePredictionModel:
             )
 
             fold_info = {
-                'fold': fold_num,
-                'accuracy': accuracy,
-                'f1_macro': f1_macro,
-                'f1_weighted': f1_weighted,
-                'confusion_matrix': cm.tolist(),
-                'class_metrics': class_metrics,  # クラス別メトリクスを追加
-                'metrics': class_metrics,  # サマリーで使用
+                "fold": fold_num,
+                "accuracy": accuracy,
+                "f1_macro": f1_macro,
+                "f1_weighted": f1_weighted,
+                "confusion_matrix": cm.tolist(),
+                "class_metrics": class_metrics,  # クラス別メトリクスを追加
+                "metrics": class_metrics,  # サマリーで使用
             }
             cv_fold_info.append(fold_info)
 
-            print(f"    精度: {accuracy:.4f}, F1(macro): {f1_macro:.4f}, F1(weighted): {f1_weighted:.4f}")
+            print(
+                f"    精度: {accuracy:.4f}, F1(macro): {f1_macro:.4f}, F1(weighted): {f1_weighted:.4f}"
+            )
             print(f"    混同行列:\n{cm}\n")
 
             # クラス別メトリクスの詳細出力
@@ -323,17 +343,17 @@ class AdvancedRacePredictionModel:
         self._save_model()
 
         return {
-            'mean_cv_accuracy': np.mean(cv_scores),
-            'std_cv_accuracy': np.std(cv_scores),
-            'cv_scores': cv_scores,
-            'mean_cv_f1': np.mean(cv_f1_scores),
-            'std_cv_f1': np.std(cv_f1_scores),
-            'cv_f1_scores': cv_f1_scores,
-            'fold_details': cv_fold_info,
-            'class_distribution': class_distribution,
-            'class_weights': class_weight_dict,
-            'training_samples': len(X),
-            'data_leakage_validation': cv_validation_results,  # データリーク検証結果
+            "mean_cv_accuracy": np.mean(cv_scores),
+            "std_cv_accuracy": np.std(cv_scores),
+            "cv_scores": cv_scores,
+            "mean_cv_f1": np.mean(cv_f1_scores),
+            "std_cv_f1": np.std(cv_f1_scores),
+            "cv_f1_scores": cv_f1_scores,
+            "fold_details": cv_fold_info,
+            "class_distribution": class_distribution,
+            "class_weights": class_weight_dict,
+            "training_samples": len(X),
+            "data_leakage_validation": cv_validation_results,  # データリーク検証結果
         }
 
     def predict_race_order(self, horse_ids: List[int], race_info: Dict = None) -> Dict:
@@ -375,44 +395,50 @@ class AdvancedRacePredictionModel:
                 # 着順の説明（クラス数が可変なので対応）
                 win_prob = float(probabilities[0]) * 100 if len(probabilities) > 0 else 0
                 place_prob = float(probabilities[1]) * 100 if len(probabilities) > 1 else 0
-                other_prob = float(probabilities[2]) * 100 if len(probabilities) > 2 else (100 - win_prob - place_prob)
+                other_prob = (
+                    float(probabilities[2]) * 100
+                    if len(probabilities) > 2
+                    else (100 - win_prob - place_prob)
+                )
 
-                results.append({
-                    'horse_id': horse_id,
-                    'horse_name': horse_details.get('raw_name', '不明'),
-                    'predicted_class': int(predicted_class),
-                    'win_probability': win_prob,
-                    'place_probability': place_prob,
-                    'other_probability': other_prob,
-                    'confidence': float(max(probabilities)) * 100,
-                })
+                results.append(
+                    {
+                        "horse_id": horse_id,
+                        "horse_name": horse_details.get("raw_name", "不明"),
+                        "predicted_class": int(predicted_class),
+                        "win_probability": win_prob,
+                        "place_probability": place_prob,
+                        "other_probability": other_prob,
+                        "confidence": float(max(probabilities)) * 100,
+                    }
+                )
 
             except Exception as e:
                 print(f"予測エラー (horse_id={horse_id}): {e}")
                 continue
 
         # 信頼度で降順ソート
-        results.sort(key=lambda x: x['confidence'], reverse=True)
+        results.sort(key=lambda x: x["confidence"], reverse=True)
 
         return {
-            'predictions': results,
-            'model_status': 'trained',
-            'total_horses': len(results),
-            'model_type': self.model_name,
+            "predictions": results,
+            "model_status": "trained",
+            "total_horses": len(results),
+            "model_type": self.model_name,
         }
 
     def get_model_info(self) -> Dict:
         """モデルの情報を取得"""
         return {
-            'is_trained': self.is_trained,
-            'model_type': self.model_name,
-            'feature_names': self.feature_names,
-            'n_features': len(self.feature_names),
+            "is_trained": self.is_trained,
+            "model_type": self.model_name,
+            "feature_names": self.feature_names,
+            "n_features": len(self.feature_names),
         }
 
     def get_feature_importance(self) -> List[Tuple[str, float]]:
         """特徴量の重要度を取得"""
-        if not self.is_trained or not hasattr(self.model, 'feature_importances_'):
+        if not self.is_trained or not hasattr(self.model, "feature_importances_"):
             return []
 
         importances = self.model.feature_importances_

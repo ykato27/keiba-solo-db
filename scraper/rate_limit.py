@@ -80,8 +80,10 @@ def _save_error_log(url: str, html: str, error: str):
 # デコレータ
 # ========================
 
+
 def with_rate_limit_and_retry(func: Callable) -> Callable:
     """レート制限と自動リトライを適用するデコレータ"""
+
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         _wait_for_rate_limit()
@@ -106,6 +108,7 @@ def with_rate_limit_and_retry(func: Callable) -> Callable:
 # ========================
 # HTTP リクエスト関数
 # ========================
+
 
 def fetch_url(url: str, timeout: int = 30) -> str:
     """URLを取得してテキストを返す
@@ -132,19 +135,19 @@ def fetch_url(url: str, timeout: int = 30) -> str:
     response.raise_for_status()
 
     # エンコーディング修正（JRA側がShift-JISの可能性がある）
-    if response.encoding is None or response.encoding.lower() == 'iso-8859-1':
+    if response.encoding is None or response.encoding.lower() == "iso-8859-1":
         # Content-Typeから charset を抽出
-        content_type = response.headers.get('content-type', '')
-        if 'charset' in content_type:
-            charset = content_type.split('charset=')[-1].strip(';')
+        content_type = response.headers.get("content-type", "")
+        if "charset" in content_type:
+            charset = content_type.split("charset=")[-1].strip(";")
             response.encoding = charset
         else:
             # デフォルトでUTF-8を試す
             try:
-                response.encoding = 'utf-8'
+                response.encoding = "utf-8"
                 response.text  # テスト
             except UnicodeDecodeError:
-                response.encoding = 'shift_jis'
+                response.encoding = "shift_jis"
 
     logger.info(f"取得完了: {len(response.text)} 文字")
     return response.text

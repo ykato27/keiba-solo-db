@@ -127,11 +127,13 @@ def _fetch_races_for_meeting(meeting_url: str) -> List[Dict[str, Any]]:
         for link in race_links:
             race_id = _extract_race_id(link.get("href"))
             if race_id:
-                races.append({
-                    "race_id": race_id,
-                    "url": link.get("href"),
-                    "title": link.text.strip(),
-                })
+                races.append(
+                    {
+                        "race_id": race_id,
+                        "url": link.get("href"),
+                        "title": link.text.strip(),
+                    }
+                )
 
         return races
 

@@ -27,6 +27,8 @@ from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 import warnings
 
+from .kelly_precondition_validator import KellyPreconditionValidator
+
 
 @dataclass
 class BettingRecommendation:
@@ -118,11 +120,27 @@ class BettingOptimizer:
         return expected_roi, expected_profit
 
     @staticmethod
+    def validate_predictions(
+        predictions: List[Dict]
+    ) -> Dict:
+        """
+        Kelly基準の前提条件をチェック（期待値検証）
+
+        Args:
+            predictions: 馬の予測情報リスト
+
+        Returns:
+            検証結果の辞書
+        """
+        return KellyPreconditionValidator.validate_portfolio(predictions)
+
+    @staticmethod
     def optimize_portfolio(
         predictions: List[Dict],
         total_budget: float,
-        min_probability: float = 0.05
-    ) -> List[BettingRecommendation]:
+        min_probability: float = 0.05,
+        validate_preconditions: bool = True
+    ) -> Tuple[List[BettingRecommendation], Dict]:
         """
         複数の馬に対する最適な配分を計算
 
@@ -138,13 +156,37 @@ class BettingOptimizer:
               ]
             total_budget: 総投資額
             min_probability: 最小確率閾値（これ以下は除外）
+            validate_preconditions: Kelly前提条件を検証するか
 
         Returns:
-            BettingRecommendation のリスト（期待ROIが高い順）
+            (BettingRecommendation のリスト, 検証結果辞書)
         """
         recommendations = []
+        validation_result = {}
 
-        for pred in predictions:
+        # Kelly基準の前提条件をチェック
+        if validate_preconditions:
+            validation_result = KellyPreconditionValidator.validate_portfolio(predictions)
+            print("\n" + "="*80)
+            print("Kelly基準 前提条件検証結果:")
+            print("="*80)
+            KellyPreconditionValidator.print_validation_report(validation_result)
+
+            # 期待値がプラスの予測のみをフィルタリング
+            positive_ev_preds, negative_ev_preds = KellyPreconditionValidator.filter_positive_ev_predictions(
+                predictions
+            )
+
+            if not positive_ev_preds:
+                print(f"\n⚠️ 警告: 期待値がプラスの予測がありません（{len(negative_ev_preds)}頭中0頭）")
+                print("賭けるべきではありません！")
+                return [], validation_result
+
+            predictions_to_use = positive_ev_preds
+        else:
+            predictions_to_use = predictions
+
+        for pred in predictions_to_use:
             horse_name = pred.get('horse_name', '不明')
             win_prob = float(pred.get('win_probability', 0))
             odds = float(pred.get('expected_odds', 1.0))
@@ -179,33 +221,39 @@ class BettingOptimizer:
             )
 
         # 期待ROIが高い順にソート
-        return sorted(recommendations, key=lambda x: x.expected_roi, reverse=True)
+        return sorted(recommendations, key=lambda x: x.expected_roi, reverse=True), validation_result
 
     @staticmethod
     def generate_scenario_recommendations(
         predictions: List[Dict],
-        budgets: List[float] = None
-    ) -> Dict[float, List[BettingRecommendation]]:
+        budgets: List[float] = None,
+        validate_once: bool = True
+    ) -> Dict[float, Tuple[List[BettingRecommendation], Dict]]:
         """
         複数の予算シナリオに対する推奨を生成
 
         Args:
             predictions: 馬の予測情報リスト
             budgets: 予算リスト（Noneの場合はデフォルト）
+            validate_once: 1度だけ前提条件を検証するか
 
         Returns:
-            予算ごとの推奨配分辞書
+            予算ごとの推奨配分と検証結果の辞書
         """
         if budgets is None:
             budgets = [1000, 5000, 10000, 50000, 100000]
 
         scenarios = {}
+        validation_result = None
 
-        for budget in budgets:
-            recommendations = BettingOptimizer.optimize_portfolio(
-                predictions, total_budget=budget
+        for i, budget in enumerate(budgets):
+            # 最初の予算シナリオだけで前提条件を検証
+            should_validate = (i == 0) and validate_once
+
+            recommendations, validation_result = BettingOptimizer.optimize_portfolio(
+                predictions, total_budget=budget, validate_preconditions=should_validate
             )
-            scenarios[budget] = recommendations
+            scenarios[budget] = (recommendations, validation_result if should_validate else {})
 
         return scenarios
 

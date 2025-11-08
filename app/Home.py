@@ -66,23 +66,19 @@ st.sidebar.markdown("---")
 # ナビゲーションメニュー
 st.sidebar.subheader("📋 メニュー")
 
-col1, col2, col3, col4 = st.sidebar.columns(4)
+col1, col2, col3 = st.sidebar.columns(3)
 
 with col1:
-    if st.button("🏇 競馬データ", use_container_width=True, disabled=True):
+    if st.button("🏠 ホーム", use_container_width=True, disabled=True):
         pass
 
 with col2:
-    if st.button("🔮 予測", use_container_width=True):
-        st.switch_page("pages/Prediction.py")
+    if st.button("📅 将来レース", use_container_width=True):
+        st.switch_page("pages/2_FutureRaces.py")
 
 with col3:
-    if st.button("📅 将来レース", use_container_width=True):
-        st.switch_page("pages/FutureRaces.py")
-
-with col4:
     if st.button("📊 エクスポート", use_container_width=True):
-        st.switch_page("pages/DataExport.py")
+        st.switch_page("pages/3_DataExport.py")
 
 st.sidebar.markdown("---")
 
@@ -173,31 +169,13 @@ if st.sidebar.button("予測ページへ移動", use_container_width=True):
 
 st.sidebar.markdown("---")
 
-# 開催日選択
+# データ取得
 all_dates = queries.get_all_race_dates()
 
 if not all_dates:
     st.warning("📊 データがまだ登録されていません")
     st.info("☝️ サイドバーで年数を選択して、「本番データを投入」をクリックしてください")
     st.stop()
-
-selected_date = st.sidebar.selectbox(
-    "開催日を選択",
-    options=all_dates,
-    format_func=lambda x: f"{x} ({len(queries.get_courses_by_date(x))}開催)",
-)
-
-# 開催場選択
-courses = queries.get_courses_by_date(selected_date)
-
-if not courses:
-    st.error(f"❌ {selected_date} の開催情報が見つかりません")
-    st.stop()
-
-selected_course = st.sidebar.selectbox(
-    "開催場を選択",
-    options=courses,
-)
 
 st.sidebar.markdown("---")
 
@@ -217,66 +195,159 @@ st.sidebar.info(
 
 st.title("🐴 競馬レース一覧")
 
-st.markdown(f"""
-### {selected_date} - {selected_course}
-""")
+# 検索セクション
+st.subheader("🔍 検索")
 
-# レース一覧を取得
-races = queries.get_races(selected_date, selected_course)
+col1, col2, col3 = st.columns(3)
 
-if not races:
-    st.warning(f"レース情報がありません")
-else:
-    st.markdown(f"**{len(races)} レース開催**")
+with col1:
+    selected_date = st.selectbox(
+        "開催日",
+        options=all_dates,
+        format_func=lambda x: f"{x} ({len(queries.get_courses_by_date(x))}開催)",
+    )
+
+with col2:
+    courses = queries.get_courses_by_date(selected_date)
+    if courses:
+        selected_course = st.selectbox(
+            "開催場",
+            options=courses,
+        )
+    else:
+        st.error(f"❌ {selected_date} の開催情報がありません")
+        st.stop()
+
+with col3:
+    # 表示オプション
+    display_mode = st.radio(
+        "表示方式",
+        ["1ヶ月 (3列)", "単日"],
+        horizontal=True
+    )
+
+st.markdown("---")
+
+# ========================
+# 表示モード別処理
+# ========================
+
+if display_mode == "1ヶ月 (3列)":
+    # 1ヶ月分のレース情報を3列で表示
+    from datetime import datetime, timedelta
+
+    # 選択された日付から1ヶ月分のレース情報を取得
+    try:
+        selected_dt = datetime.strptime(selected_date, "%Y-%m-%d")
+    except:
+        selected_dt = datetime.now()
+
+    # その月の全日を取得
+    month_start = selected_dt.replace(day=1)
+    # 次の月の1日を取得して、1日前を月の最終日とする
+    if selected_dt.month == 12:
+        month_end = selected_dt.replace(year=selected_dt.year + 1, month=1, day=1) - timedelta(days=1)
+    else:
+        month_end = selected_dt.replace(month=selected_dt.month + 1, day=1) - timedelta(days=1)
+
+    # 月の全日付を取得
+    month_dates = [d.strftime("%Y-%m-%d") for d in
+                   [month_start + timedelta(days=x) for x in range((month_end - month_start).days + 1)]
+                   if d.strftime("%Y-%m-%d") in all_dates]
+
+    st.markdown(f"### {selected_date[:7]} - {selected_course}")
+    st.markdown(f"**{len(month_dates)} 日開催**")
     st.markdown("---")
 
-    # レーストabs
-    for race in races:
-        race_id = race["race_id"]
+    # 3列でレース情報を表示
+    if month_dates:
+        cols = st.columns(3)
 
-        with st.container(border=True):
-            col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
+        for idx, race_date in enumerate(month_dates):
+            col_idx = idx % 3
+            races = queries.get_races(race_date, selected_course)
 
-            with col1:
-                st.markdown(f"### R{race['race_no']}")
+            with cols[col_idx]:
+                with st.container(border=True):
+                    st.markdown(f"### 📅 {race_date}")
 
-            with col2:
-                st.markdown(f"**{race.get('title', '無題')}**")
-                st.caption(f"{race['distance_m']}m / {race['surface']}")
+                    if races:
+                        st.markdown(f"**{len(races)} レース**")
+                        st.markdown("---")
 
-            with col3:
-                if race.get('going'):
-                    st.caption(f"馬場: {race['going']}")
-                if race.get('grade'):
-                    st.caption(f"クラス: {race['grade']}")
+                        for race in races:
+                            race_id = race["race_id"]
 
-            with col4:
-                if st.button("詳細", key=f"race_{race_id}"):
-                    st.session_state.selected_race_id = race_id
-                    st.switch_page("pages/Race.py")
+                            # レース情報
+                            st.markdown(f"**R{race['race_no']}** {race.get('title', '無題')}")
+                            st.caption(f"{race['distance_m']}m / {race['surface']}")
 
-            # 出走馬簡易表示
-            with st.expander("出走馬", expanded=False):
-                entries = queries.get_race_entries_with_metrics(race_id)
+                            if st.button("詳細を見る", key=f"race_{race_id}_month", use_container_width=True):
+                                st.session_state.selected_race_id = race_id
+                                st.switch_page("pages/8_Race.py")
 
-                if entries:
-                    # テーブル表示用データ
-                    table_data = []
-                    for entry in entries:
-                        table_data.append({
-                            "馬番": entry.get("horse_no"),
-                            "馬名": entry.get("horse_name"),
-                            "騎手": entry.get("jockey_name", "-"),
-                            "斤量": entry.get("weight_carried", "-"),
-                            "勝率": f"{(entry.get('win_rate', 0) or 0) * 100:.1f}%",
-                            "人気": entry.get("popularity", "-"),
-                        })
+                            st.markdown("---")
+                    else:
+                        st.caption("⚠️ レース情報なし")
+    else:
+        st.info(f"📋 {selected_date[:7]} のレース情報がありません")
 
-                    st.dataframe(
-                        table_data,
-                        use_container_width=True,
-                        hide_index=True,
-                    )
+else:
+    # 単日表示
+    st.markdown(f"### {selected_date} - {selected_course}")
+
+    # レース一覧を取得
+    races = queries.get_races(selected_date, selected_course)
+
+    if not races:
+        st.warning(f"レース情報がありません")
+    else:
+        st.markdown(f"**{len(races)} レース開催**")
+        st.markdown("---")
+
+        # レースを3列で表示
+        cols = st.columns(3)
+
+        for idx, race in enumerate(races):
+            race_id = race["race_id"]
+            col_idx = idx % 3
+
+            with cols[col_idx]:
+                with st.container(border=True):
+                    st.markdown(f"### R{race['race_no']}")
+                    st.markdown(f"**{race.get('title', '無題')}**")
+                    st.caption(f"{race['distance_m']}m / {race['surface']}")
+
+                    if race.get('going'):
+                        st.caption(f"馬場: {race['going']}")
+                    if race.get('grade'):
+                        st.caption(f"クラス: {race['grade']}")
+
+                    if st.button("詳細", key=f"race_{race_id}_single", use_container_width=True):
+                        st.session_state.selected_race_id = race_id
+                        st.switch_page("pages/8_Race.py")
+
+                    # 出走馬簡易表示
+                    with st.expander("出走馬"):
+                        entries = queries.get_race_entries_with_metrics(race_id)
+
+                        if entries:
+                            # テーブル表示用データ
+                            table_data = []
+                            for entry in entries:
+                                table_data.append({
+                                    "馬番": entry.get("horse_no"),
+                                    "馬名": entry.get("horse_name"),
+                                    "騎手": entry.get("jockey_name", "-"),
+                                    "斤量": entry.get("weight_carried", "-"),
+                                    "勝率": f"{(entry.get('win_rate', 0) or 0) * 100:.1f}%",
+                                })
+
+                            st.dataframe(
+                                table_data,
+                                use_container_width=True,
+                                hide_index=True,
+                            )
 
 # ========================
 # フッター

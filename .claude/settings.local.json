@@ -24,7 +24,8 @@
       "Bash(git fetch:*)",
       "Bash(git pull:*)",
       "Bash(python test_betting_optimizer.py:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

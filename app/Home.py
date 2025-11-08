@@ -251,32 +251,39 @@ if display_dates:
         if all_races_for_date:
             dates_with_races.append((race_date, all_races_for_date))
 
-    # 3列グリッドで表示
+    # 日付ごとに表示（各日付内で3列グリッド）
     if dates_with_races:
-        for row_start in range(0, len(dates_with_races), 3):
-            cols = st.columns(3)
-            row_end = min(row_start + 3, len(dates_with_races))
+        for race_date, all_races_for_date in dates_with_races:
+            # 日付ヘッダー
+            st.markdown(f"## 📅 {race_date}")
 
-            for col_idx, idx in enumerate(range(row_start, row_end)):
-                race_date, all_races_for_date = dates_with_races[idx]
+            # 会場ごとにグループ化
+            races_by_course = {}
+            for course, race in all_races_for_date:
+                if course not in races_by_course:
+                    races_by_course[course] = []
+                races_by_course[course].append(race)
 
-                with cols[col_idx]:
-                    with st.container(border=True):
-                        st.markdown(f"### 📅 {race_date}")
-                        st.markdown(f"**{len(all_races_for_date)} レース**")
-                        st.markdown("---")
+            # この日付のレースを平坦なリスト化（会場ごと、順序を保持）
+            races_list = []
+            for course in selected_courses:
+                if course in races_by_course:
+                    for race in races_by_course[course]:
+                        races_list.append((course, race))
 
-                        # 会場ごとにグループ化
-                        races_by_course = {}
-                        for course, race in all_races_for_date:
-                            if course not in races_by_course:
-                                races_by_course[course] = []
-                            races_by_course[course].append(race)
+            # 3列グリッドで表示
+            if races_list:
+                for row_start in range(0, len(races_list), 3):
+                    cols = st.columns(3)
+                    row_end = min(row_start + 3, len(races_list))
 
-                        # 会場ごとに表示（色分け）
-                        for course in selected_courses:
-                            if course in races_by_course:
-                                # 会場ラベルを色付きで表示
+                    for col_idx, race_idx in enumerate(range(row_start, row_end)):
+                        course, race = races_list[race_idx]
+                        race_id = race["race_id"]
+
+                        with cols[col_idx]:
+                            with st.container(border=True):
+                                # 会場を色付きで表示
                                 st.markdown(
                                     f'<div style="background-color: {course_colors[course]}; '
                                     f'padding: 8px; border-radius: 4px; margin-bottom: 8px;">'
@@ -284,17 +291,15 @@ if display_dates:
                                     unsafe_allow_html=True
                                 )
 
-                                # その会場のレースを表示
-                                for race in races_by_course[course]:
-                                    race_id = race["race_id"]
-                                    st.markdown(f"**R{race['race_no']}** {race.get('title', '無題')}")
-                                    st.caption(f"{race['distance_m']}m / {race['surface']}")
+                                # レース情報
+                                st.markdown(f"**R{race['race_no']}** {race.get('title', '無題')}")
+                                st.caption(f"{race['distance_m']}m / {race['surface']}")
 
-                                    if st.button("詳細を見る", key=f"race_{race_id}_{race_date}", use_container_width=True):
-                                        st.session_state.selected_race_id = race_id
-                                        st.switch_page("pages/8_Race.py")
+                                if st.button("詳細を見る", key=f"race_{race_id}_{race_date}", use_container_width=True):
+                                    st.session_state.selected_race_id = race_id
+                                    st.switch_page("pages/8_Race.py")
 
-                                    st.markdown("---")
+            st.markdown("---")
 
 else:
     st.info(f"📋 {selected_month[:4]}年{selected_month[-2:]}月のレース情報がありません")

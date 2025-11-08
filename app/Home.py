@@ -143,6 +143,13 @@ if st.sidebar.button("📥 本番データを投入", use_container_width=True):
 
 st.sidebar.markdown("---")
 
+# 予測ページへのリンク
+st.sidebar.subheader("🔮 レース予測")
+if st.sidebar.button("予測ページへ移動", use_container_width=True):
+    st.switch_page("pages/Prediction.py")
+
+st.sidebar.markdown("---")
+
 # 開催日選択
 all_dates = queries.get_all_race_dates()
 

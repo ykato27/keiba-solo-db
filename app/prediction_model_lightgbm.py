@@ -197,8 +197,10 @@ class AdvancedRacePredictionModel:
         """TimeSeriesSplitを使った交差検証付き訓練"""
         X, y = self.build_training_data_with_cv()
 
+        print(f"デバッグ: 訓練データサイズ = {len(X) if X is not None else 0}")
+
         if X is None or len(X) < 50:
-            raise ValueError("訓練データが不足しています")
+            raise ValueError(f"訓練データが不足しています（取得件数: {len(X) if X is not None else 0}）")
 
         # TimeSeriesSplitで未来情報リークを防止
         tscv = TimeSeriesSplit(n_splits=3)

@@ -144,8 +144,8 @@ def generate_test_entries(races, horses, jockeys, trainers):
             jockey = random.choice(jockeys)
             trainer = random.choice(trainers)
 
-            # 着順（上位3頭は着順あり、他はNone）
-            finish_pos = horse_no if horse_no <= 3 else None
+            # 着順（上位8頭に着順を付与して訓練データを増やす）
+            finish_pos = horse_no if horse_no <= 8 else None
 
             # 馬の体重（350-550kg）
             horse_weight = round(400.0 + random.uniform(-100, 150), 0)

@@ -94,13 +94,13 @@ class AdvancedRacePredictionModel:
         except Exception as e:
             print(f"モデルの保存に失敗しました: {e}")
 
-    def build_training_data_with_cv(self) -> Tuple[np.ndarray, np.ndarray]:
+    def build_training_data_with_cv(self) -> Tuple[np.ndarray, np.ndarray, List[str]]:
         """
         TimeSeriesSplitに対応した訓練データを構築
         未来情報リークを防止する
 
         Returns:
-            (特徴量行列, ターゲット行列)
+            (特徴量行列, ターゲット行列, レース日付リスト)
         """
         X_list = []
         y_list = []
@@ -111,7 +111,8 @@ class AdvancedRacePredictionModel:
             conn = db.get_connection()
             cursor = conn.cursor()
 
-            # 着順が記録されているエントリのみを対象
+            # 着順が記録されているエントリのみを対象（日付昇順で整列）
+            # 注：LIMIT なし。全データを使用する（データリーク防止のため TimeSeriesSplit で時間分離）
             cursor.execute(
                 """
                 SELECT DISTINCT
@@ -128,7 +129,6 @@ class AdvancedRacePredictionModel:
                 JOIN races r ON e.race_id = r.race_id
                 WHERE e.finish_pos IS NOT NULL AND e.finish_pos > 0
                 ORDER BY r.race_date ASC
-                LIMIT 3000
                 """
             )
             entries = cursor.fetchall()
@@ -182,16 +182,16 @@ class AdvancedRacePredictionModel:
             conn.close()
 
             if not X_list:
-                return None, None
+                return None, None, None
 
             X = np.array(X_list)
             y = np.array(y_list)
 
-            return X, y
+            return X, y, race_dates
 
         except Exception as e:
             print(f"訓練データ構築エラー: {e}")
-            return None, None
+            return None, None, None
 
     def train_with_cross_validation(self):
         """TimeSeriesSplitを使った交差検証付き訓練"""

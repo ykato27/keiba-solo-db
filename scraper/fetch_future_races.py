@@ -13,8 +13,8 @@ import time
 
 from bs4 import BeautifulSoup
 
-from scraper.rate_limit import fetch_url_with_retry
-from scraper.selectors import BASE_URL
+from .rate_limit import fetch_url_with_retry
+from .selectors import BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +200,7 @@ def _parse_upcoming_races(html: str, days_ahead: int = 14) -> List[Dict[str, Any
         return races
 
 
-def _parse_future_race_card(html: str, race_id: str) -> Dict[str, Any]]:
+def _parse_future_race_card(html: str, race_id: str) -> Dict[str, Any]:
     """
     将来レースの出馬表HTMLをパース
 

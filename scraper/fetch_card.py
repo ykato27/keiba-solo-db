@@ -10,8 +10,8 @@ import json
 
 from bs4 import BeautifulSoup
 
-from scraper.rate_limit import fetch_url_with_retry
-from scraper.selectors import ENTRY_TABLE_ROWS
+from .rate_limit import fetch_url_with_retry
+from .selectors import ENTRY_TABLE_ROWS
 
 logger = logging.getLogger(__name__)
 

@@ -132,21 +132,30 @@ def generate_test_trainers(count=50):
 
 
 def generate_test_entries(races, horses, jockeys, trainers):
-    """テスト出走データを生成"""
+    """テスト出走データを生成（拡張版：新フィールド対応）"""
     entries = []
-    
+
     for race in races:
         # 各レースに8-14頭出走
         num_starters = random.randint(8, 14)
-        
+
         for horse_no in range(1, num_starters + 1):
             horse = random.choice(horses)
             jockey = random.choice(jockeys)
             trainer = random.choice(trainers)
-            
+
             # 着順（上位3頭は着順あり、他はNone）
             finish_pos = horse_no if horse_no <= 3 else None
-            
+
+            # 馬の体重（350-550kg）
+            horse_weight = round(400.0 + random.uniform(-100, 150), 0)
+
+            # 前走からの経過日数（7-35日間が多い）
+            days_since_last_race = random.choices(
+                [7, 14, 21, 28, 35],
+                weights=[30, 35, 20, 10, 5]
+            )[0]
+
             entries.append({
                 "race_date": race["race_date"],
                 "course": race["course"],
@@ -158,11 +167,14 @@ def generate_test_entries(races, horses, jockeys, trainers):
                 "horse_no": horse_no,
                 "age": random.randint(3, 8),
                 "weight_carried": round(52.0 + random.uniform(0, 10), 1),
+                "horse_weight": horse_weight,
                 "finish_pos": finish_pos,
                 "finish_time_seconds": round(120.0 + random.uniform(0, 60), 1) if finish_pos else None,
                 "margin": random.choice(["ハナ", "クビ", "アタマ", "1/2馬身", "1馬身", "2馬身"]) if horse_no == 2 else None,
                 "odds": round(1.5 + random.uniform(0, 50), 1),
                 "popularity": horse_no,
+                "days_since_last_race": days_since_last_race,
+                "is_steeplechase": random.choice([0, 0, 0, 0, 1]),  # 20%の確率で障害
             })
-    
+
     return entries

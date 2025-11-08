@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS race_entries (
   horse_no INTEGER,
   age INTEGER,
   weight_carried REAL,                  -- 斤量
+  horse_weight REAL,                    -- 馬の体重
   finish_pos INTEGER,                   -- 確定前はnull
   finish_time_seconds REAL,
   margin TEXT,
@@ -51,6 +52,8 @@ CREATE TABLE IF NOT EXISTS race_entries (
   popularity INTEGER,
   corner_order TEXT,                    -- "3-3-2"など
   remark TEXT,
+  days_since_last_race INTEGER,         -- 前走からの経過日数
+  is_steeplechase INTEGER DEFAULT 0,    -- 障害フラグ
   UNIQUE (race_id, horse_id)
 );
 
@@ -79,6 +82,25 @@ CREATE TABLE IF NOT EXISTS horse_metrics (
   distance_pref TEXT,                   -- JSON文字列
   surface_pref TEXT,                    -- JSON文字列
   updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS horse_pedigree (
+  horse_id INTEGER PRIMARY KEY REFERENCES horses(horse_id),
+  sire_id INTEGER REFERENCES horses(horse_id),         -- 父
+  dam_sire_id INTEGER REFERENCES horses(horse_id),     -- 母父
+  sire_win_rate REAL,                                  -- 父の産駒勝率
+  dam_sire_win_rate REAL,                              -- 母父の産駒勝率
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS horse_weight_history (
+  history_id INTEGER PRIMARY KEY,
+  horse_id INTEGER NOT NULL REFERENCES horses(horse_id),
+  race_id INTEGER REFERENCES races(race_id),
+  weight REAL,
+  weight_change REAL,                   -- 前レースからの体重変化
+  recorded_at TEXT NOT NULL,
+  UNIQUE (horse_id, race_id)
 );
 
 -- Indexes

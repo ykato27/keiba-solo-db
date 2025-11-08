@@ -17,8 +17,8 @@ import sys
 # パス設定
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import queries
-import features as feat_module
+from app import queries
+from app import features as feat_module
 
 
 class RacePredictionModel:

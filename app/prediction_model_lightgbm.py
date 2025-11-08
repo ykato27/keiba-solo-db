@@ -28,8 +28,8 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 # パス設定
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import queries
-import features as feat_module
+from app import queries
+from app import features as feat_module
 
 
 class AdvancedRacePredictionModel:
@@ -107,7 +107,7 @@ class AdvancedRacePredictionModel:
         race_dates = []
 
         try:
-            import db
+            from app import db
             conn = db.get_connection()
             cursor = conn.cursor()
 
@@ -276,10 +276,10 @@ class AdvancedRacePredictionModel:
                 probabilities = self.model.predict_proba(vector_scaled)[0]
                 predicted_class = self.model.predict(vector_scaled)[0]
 
-                # 着順の説明
-                win_prob = float(probabilities[0]) * 100
-                place_prob = float(probabilities[1]) * 100
-                other_prob = float(probabilities[2]) * 100
+                # 着順の説明（クラス数が可変なので対応）
+                win_prob = float(probabilities[0]) * 100 if len(probabilities) > 0 else 0
+                place_prob = float(probabilities[1]) * 100 if len(probabilities) > 1 else 0
+                other_prob = float(probabilities[2]) * 100 if len(probabilities) > 2 else (100 - win_prob - place_prob)
 
                 results.append({
                     'horse_id': horse_id,

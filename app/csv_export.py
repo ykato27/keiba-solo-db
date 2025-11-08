@@ -37,7 +37,7 @@ def export_race_entries_to_csv(race_id: int) -> str:
 
     # CSV形式に変換
     csv_buffer = io.StringIO()
-    df.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
+    df.to_csv(csv_buffer, index=False, encoding='cp932')
 
     return csv_buffer.getvalue()
 
@@ -87,7 +87,7 @@ def export_all_races_to_csv(start_date: str = None, end_date: str = None) -> str
 
     # CSV形式に変換
     csv_buffer = io.StringIO()
-    df.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
+    df.to_csv(csv_buffer, index=False, encoding='cp932')
 
     return csv_buffer.getvalue()
 
@@ -233,7 +233,7 @@ def export_training_features_to_csv() -> str:
 
     # CSV形式に変換
     csv_buffer = io.StringIO()
-    df.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
+    df.to_csv(csv_buffer, index=False, encoding='cp932')
 
     return csv_buffer.getvalue()
 
@@ -281,7 +281,7 @@ def export_horse_metrics_to_csv() -> str:
 
     # CSV形式に変換
     csv_buffer = io.StringIO()
-    df.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
+    df.to_csv(csv_buffer, index=False, encoding='cp932')
 
     return csv_buffer.getvalue()
 
@@ -433,7 +433,7 @@ def export_entry_details_to_csv(race_id: int = None, start_date: str = None, end
 
         # CSV形式に変換
         csv_buffer = io.StringIO()
-        df.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
+        df.to_csv(csv_buffer, index=False, encoding='cp932')
 
         return csv_buffer.getvalue()
 

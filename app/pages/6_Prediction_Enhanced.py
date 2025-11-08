@@ -260,81 +260,104 @@ with tab3:
 
     # レース選択
     try:
-        races = queries.get_all_races()
-        if races:
-            race_options = {
-                f"{r[1]} - {r[2]} {r[3]}R": r[0]
-                for r in races[-20:]  # 最新20レース
-            }
+        # 全開催日を取得
+        all_dates = queries.get_all_race_dates()
 
-            selected_race_display = st.selectbox(
-                "レースを選択",
-                options=race_options.keys(),
-                help="予測対象のレースを選択"
-            )
+        if all_dates:
+            # 最新の開催日から最新20レースを取得
+            races_list = []
+            for date in sorted(all_dates, reverse=True):
+                courses = queries.get_courses_by_date(date)
+                if courses:
+                    for course in courses:
+                        races = queries.get_races(date, course)
+                        if races:
+                            for race in races:
+                                races_list.append((
+                                    race["race_id"],
+                                    date,
+                                    course,
+                                    race["race_no"],
+                                    race.get("title", "無題")
+                                ))
+                if len(races_list) >= 20:
+                    races_list = races_list[:20]
+                    break
 
-            if selected_race_display:
-                race_id = race_options[selected_race_display]
+            if races_list:
+                race_options = {
+                    f"{r[1]} - {r[2]} {r[3]}R {r[4]}": r[0]
+                    for r in races_list
+                }
 
-                if st.button("🔮 予測を実行", type="primary", use_container_width=True):
-                    with st.status("予測実行中...", expanded=True) as status:
-                        try:
-                            # モデル初期化
-                            model = pml.get_advanced_prediction_model()
+                selected_race_display = st.selectbox(
+                    "レースを選択",
+                    options=race_options.keys(),
+                    help="予測対象のレースを選択"
+                )
 
-                            if not model.is_trained:
-                                st.warning("⚠️ モデルがまだ訓練されていません")
-                                st.stop()
+                if selected_race_display:
+                    race_id = race_options[selected_race_display]
 
-                            # 出走馬を取得
-                            entries = queries.get_race_entries(race_id)
+                    if st.button("🔮 予測を実行", type="primary", use_container_width=True):
+                        with st.status("予測実行中...", expanded=True) as status:
+                            try:
+                                # モデル初期化
+                                model = pml.get_advanced_prediction_model()
 
-                            if not entries:
-                                st.error("このレースの出走馬情報が見つかりません")
-                                st.stop()
+                                if not model.is_trained:
+                                    st.warning("⚠️ モデルがまだ訓練されていません")
+                                    st.stop()
 
-                            st.write(f"📊 {len(entries)} 頭の予測を実行中...")
+                                # 出走馬を取得
+                                entries = queries.get_race_entries(race_id)
 
-                            # 予測
-                            predictions = []
-                            for entry in entries:
-                                try:
-                                    pred = model.predict(
-                                        race_id=race_id,
-                                        horse_id=entry.get('horse_id'),
-                                        entry_info=entry
-                                    )
-                                    predictions.append(pred)
-                                except Exception as e:
-                                    st.warning(f"予測エラー: {e}")
-                                    continue
+                                if not entries:
+                                    st.error("このレースの出走馬情報が見つかりません")
+                                    st.stop()
 
-                            status.update(label="✅ 完了", state="complete")
+                                st.write(f"📊 {len(entries)} 頭の予測を実行中...")
 
-                            st.subheader("📈 予測結果")
+                                # 予測
+                                predictions = []
+                                for entry in entries:
+                                    try:
+                                        pred = model.predict(
+                                            race_id=race_id,
+                                            horse_id=entry.get('horse_id'),
+                                            entry_info=entry
+                                        )
+                                        predictions.append(pred)
+                                    except Exception as e:
+                                        st.warning(f"予測エラー: {e}")
+                                        continue
 
-                            # 予測結果をDataFrameに
-                            pred_df = pd.DataFrame([
-                                {
-                                    "馬名": p.get('horse_name'),
-                                    "1着確率": f"{p.get('win_prob', 0):.1%}",
-                                    "2-3着確率": f"{p.get('place_prob', 0):.1%}",
-                                    "その他確率": f"{p.get('other_prob', 0):.1%}",
-                                }
-                                for p in predictions
-                            ])
+                                status.update(label="✅ 完了", state="complete")
 
-                            st.dataframe(pred_df, use_container_width=True)
+                                st.subheader("📈 予測結果")
 
-                            # 将来のTab4へデータを渡す
-                            st.session_state.latest_predictions = predictions
-                            st.session_state.latest_race_id = race_id
+                                # 予測結果をDataFrameに
+                                pred_df = pd.DataFrame([
+                                    {
+                                        "馬名": p.get('horse_name'),
+                                        "1着確率": f"{p.get('win_prob', 0):.1%}",
+                                        "2-3着確率": f"{p.get('place_prob', 0):.1%}",
+                                        "その他確率": f"{p.get('other_prob', 0):.1%}",
+                                    }
+                                    for p in predictions
+                                ])
 
-                            st.info("💡 「馬券配分推奨」タブで最適な配分を確認できます")
+                                st.dataframe(pred_df, use_container_width=True)
 
-                        except Exception as e:
-                            status.update(label="❌ エラー", state="error")
-                            st.error(f"予測エラー: {e}")
+                                # 将来のTab4へデータを渡す
+                                st.session_state.latest_predictions = predictions
+                                st.session_state.latest_race_id = race_id
+
+                                st.info("💡 「馬券配分推奨」タブで最適な配分を確認できます")
+
+                            except Exception as e:
+                                status.update(label="❌ エラー", state="error")
+                                st.error(f"予測エラー: {e}")
 
         else:
             st.info("📋 レース情報がまだ登録されていません")

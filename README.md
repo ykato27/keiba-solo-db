@@ -86,7 +86,7 @@ keiba-solo-db/
 
 - Python 3.9以上
 - Git
-- pip または conda
+- [uv](https://docs.astral.sh/uv/) - Python パッケージマネージャー
 
 ### セットアップ
 
@@ -95,14 +95,13 @@ keiba-solo-db/
 git clone <repo-url>
 cd keiba-solo-db
 
-# 仮想環境を作成（推奨）
-python -m venv venv
-source venv/bin/activate  # macOS/Linux
-# または
-venv\Scripts\activate  # Windows
+# uv で依存関係をインストール（仮想環境自動作成）
+uv sync
 
-# 依存関係をインストール
-pip install -r requirements.txt
+# 仮想環境を有効化
+source .venv/bin/activate  # macOS/Linux
+# または
+.venv\Scripts\activate  # Windows
 
 # データベーススキーマを初期化
 python -c "from app.db import init_schema; init_schema()"
@@ -296,10 +295,10 @@ bash lint.sh
 
 ```bash
 # 全テスト実行
-pytest tests/ -v
+uv run pytest tests/ -v
 
 # カバレッジ付きで実行
-pytest tests/ --cov=app --cov=etl --cov=scraper --cov=metrics
+uv run pytest tests/ --cov=app --cov=etl --cov=scraper --cov=metrics
 ```
 
 #### 新機能追加フロー

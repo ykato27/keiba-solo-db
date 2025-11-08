@@ -28,41 +28,41 @@ tests/
 ### Run All Tests
 ```bash
 # Run all tests with verbose output
-pytest tests/ -v
+uv run pytest tests/ -v
 
 # Run with coverage report
-pytest tests/ --cov=app --cov=etl --cov=scraper --cov=metrics
+uv run pytest tests/ --cov=app --cov=etl --cov=scraper --cov=metrics
 
 # Run with coverage and HTML report
-pytest tests/ --cov=app --cov=etl --cov=scraper --cov=metrics --cov-report=html
+uv run pytest tests/ --cov=app --cov=etl --cov=scraper --cov=metrics --cov-report=html
 # Open htmlcov/index.html in browser
 ```
 
 ### Run Specific Test File
 ```bash
-pytest tests/test_pipeline.py -v
-pytest tests/test_prediction_page.py::test_model_training -v
+uv run pytest tests/test_pipeline.py -v
+uv run pytest tests/test_prediction_page.py::test_model_training -v
 ```
 
 ### Run Tests Matching Pattern
 ```bash
 # Run only prediction-related tests
-pytest tests/ -k prediction -v
+uv run pytest tests/ -k prediction -v
 
 # Run only data science tests
-pytest tests/ -k ds -v
+uv run pytest tests/ -k ds -v
 
 # Run tests excluding slow tests
-pytest tests/ -m "not slow" -v
+uv run pytest tests/ -m "not slow" -v
 ```
 
 ### Watch Mode (Auto-rerun on Changes)
 ```bash
-# Install pytest-watch
-pip install pytest-watch
+# Install pytest-watch (if not already installed)
+uv pip install pytest-watch
 
 # Run tests on file changes
-ptw tests/
+uv run ptw tests/
 ```
 
 ---
@@ -214,7 +214,7 @@ app/features.py: 78%  # 78% of lines executed
 
 **How to Run**:
 ```bash
-pytest tests/test_pipeline.py -v
+uv run pytest tests/test_pipeline.py -v
 ```
 
 ---
@@ -230,7 +230,7 @@ pytest tests/test_pipeline.py -v
 
 **How to Run**:
 ```bash
-pytest tests/test_csv_export.py -v
+uv run pytest tests/test_csv_export.py -v
 ```
 
 ---
@@ -247,10 +247,10 @@ pytest tests/test_csv_export.py -v
 
 **How to Run**:
 ```bash
-pytest tests/test_prediction_page.py -v
+uv run pytest tests/test_prediction_page.py -v
 
 # Or with model selection
-pytest tests/test_prediction_page.py::test_model_training -v
+uv run pytest tests/test_prediction_page.py::test_model_training -v
 ```
 
 ---
@@ -267,7 +267,7 @@ pytest tests/test_prediction_page.py::test_model_training -v
 
 **How to Run**:
 ```bash
-pytest tests/test_betting_optimizer.py -v
+uv run pytest tests/test_betting_optimizer.py -v
 ```
 
 **Example Test**:
@@ -303,10 +303,10 @@ def test_kelly_criterion_with_positive_ev():
 
 **How to Run**:
 ```bash
-pytest tests/test_ds_improvements.py -v
+uv run pytest tests/test_ds_improvements.py -v
 
 # Or run only LightGBM tests
-pytest tests/test_ds_improvements.py -k lightgbm -v
+uv run pytest tests/test_ds_improvements.py -k lightgbm -v
 ```
 
 **Example Test**:
@@ -334,7 +334,7 @@ def test_lightgbm_probabilities_sum_to_one():
 
 ### 1. Run with Verbose Output
 ```bash
-pytest tests/test_file.py::test_function -vv
+uv run pytest tests/test_file.py::test_function -vv
 ```
 
 ### 2. Print Debug Information
@@ -347,7 +347,7 @@ def test_something():
 
 Run with:
 ```bash
-pytest tests/test_file.py -vv -s  # -s shows print output
+uv run pytest tests/test_file.py -vv -s  # -s shows print output
 ```
 
 ### 3. Drop into Debugger
@@ -362,7 +362,7 @@ def test_something():
 
 Run with:
 ```bash
-pytest tests/test_file.py --pdb
+uv run pytest tests/test_file.py --pdb
 ```
 
 ### 4. Use pytest Fixtures for Setup

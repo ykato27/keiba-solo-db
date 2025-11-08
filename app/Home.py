@@ -13,11 +13,11 @@ project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-import db
-import queries
-import charts
-import test_data
-import progress_utils
+from app import db
+from app import queries
+from app import charts
+from app import test_data
+from app import progress_utils
 
 # ページ設定
 st.set_page_config(

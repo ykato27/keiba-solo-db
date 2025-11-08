@@ -58,7 +58,8 @@ def extract_features_for_horse(horse_details: Dict, race_info: Dict = None, entr
     if isinstance(distance_pref, str):
         try:
             distance_pref = json.loads(distance_pref)
-        except:
+        except (json.JSONDecodeError, ValueError):
+            # JSON パース失敗時はデフォルト値を使用
             distance_pref = {}
 
     features['distance_win_rate'] = float(distance_pref.get('win_rate', 0) or 0)
@@ -81,7 +82,8 @@ def extract_features_for_horse(horse_details: Dict, race_info: Dict = None, entr
     if isinstance(surface_pref, str):
         try:
             surface_pref = json.loads(surface_pref)
-        except:
+        except (json.JSONDecodeError, ValueError):
+            # JSON パース失敗時はデフォルト値を使用
             surface_pref = {}
 
     features['surface_win_rate'] = float(surface_pref.get('win_rate', 0) or 0)
@@ -141,7 +143,8 @@ def extract_features_for_horse(horse_details: Dict, race_info: Dict = None, entr
     if isinstance(pedigree, str):
         try:
             pedigree = json.loads(pedigree)
-        except:
+        except (json.JSONDecodeError, ValueError):
+            # JSON パース失敗時はデフォルト値を使用
             pedigree = {}
 
     features['sire_win_rate'] = float(pedigree.get('sire_win_rate', 0) or 0)

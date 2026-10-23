@@ -6,7 +6,11 @@ Early Stopping、Learning Curve、過学習診断を含む
 プロダクションレベルのモデル検証を提供します。
 """
 
+import logging
+
 import numpy as np
+
+logger = logging.getLogger(__name__)
 import pandas as pd
 from typing import Dict, List, Tuple, Optional
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
@@ -195,7 +199,9 @@ class ModelTrainingEnhanced:
                 auc_score = roc_auc_score(
                     y_true, y_proba, multi_class="ovr", average="weighted", zero_division=0
                 )
-            except:
+            except Exception:
+                # クラスが1種類しかないFoldなどではAUCが定義できないため NaN とする
+                logger.exception("Fold %d のAUC計算に失敗しました", fold_idx + 1)
                 auc_score = np.nan
 
             fold_metrics.append(

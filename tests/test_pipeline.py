@@ -1,180 +1,79 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-Local data pipeline test
-Tests: database init, data generation, ETL, and model training
+"""データパイプラインの統合テスト（pytest形式）
+
+旧版はスクリプト形式で、本番DB（data/keiba.db）を unlink してから再構築する
+危険な実装だった。現在は conftest のフィクスチャにより一時DB上でのみ実行され、
+本番DBには一切触れない。
 """
 
-import sys
-import os
 from pathlib import Path
 
-# Set up path
-project_root = Path.cwd()
-sys.path.insert(0, str(project_root))
+import pytest
 
-# Fix for Windows console encoding
-import io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+from app import db as app_db
 
-def main():
-    print('=' * 60)
-    print('LOCAL DATA PIPELINE TEST')
-    print('=' * 60)
-    print(f'Working directory: {project_root}')
-    print()
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PRODUCTION_DB = PROJECT_ROOT / "data" / "keiba.db"
 
-    # Step 1: Initialize database
-    print('Step 1: Initializing database...')
+
+def test_temp_db_is_not_production_db(temp_db):
+    """テスト用DBが本番DBと別の場所にあること（安全装置の確認）"""
+    assert temp_db != PRODUCTION_DB
+    assert temp_db.exists()
+
+
+def test_pipeline_end_to_end(populated_db):
+    """デモデータ生成 → ETL → 指標計算 の一連が一時DBで完走すること"""
+    conn = app_db.get_connection(read_only=True)
     try:
-        from app import db
-
-        # Remove old database to start fresh
-        db_path = project_root / 'data' / 'keiba.db'
-        if db_path.exists():
-            db_path.unlink()
-            print('  Removed old database')
-
-        conn = db.get_connection()
-        cursor = conn.cursor()
-
-        # Read and execute schema
-        schema_path = project_root / 'sql' / 'schema.sql'
-        with open(schema_path, 'r', encoding='utf-8') as f:
-            schema_sql = f.read()
-
-        cursor.executescript(schema_sql)
-        conn.commit()
-        conn.close()
-        print('✓ Database initialized')
-    except Exception as e:
-        print(f'✗ Database init failed: {e}')
-        import traceback
-        traceback.print_exc()
-        return False
-
-    # Step 2: Generate test data
-    print()
-    print('Step 2: Generating test data (1 year)...')
-    try:
-        from app import test_data
-
-        races = test_data.generate_test_races(years=1)
-        horses = test_data.generate_test_horses(count=150)
-        jockeys = test_data.generate_test_jockeys(count=40)
-        trainers = test_data.generate_test_trainers(count=40)
-        entries = test_data.generate_test_entries(races, horses, jockeys, trainers)
-
-        print(f'✓ Generated {len(races)} races')
-        print(f'✓ Generated {len(horses)} horses')
-        print(f'✓ Generated {len(entries)} entries')
-
-        # Check finish_pos distribution
-        finish_positions = [e['finish_pos'] for e in entries if e['finish_pos'] is not None]
-        print(f'✓ Entries with results (finish_pos != None): {len(finish_positions)}')
-
-    except Exception as e:
-        print(f'✗ Test data generation failed: {e}')
-        import traceback
-        traceback.print_exc()
-        return False
-
-    # Step 3: Run ETL
-    print()
-    print('Step 3: Running ETL pipeline...')
-    try:
-        from etl import upsert_master, upsert_race, upsert_entry
-
-        print('  - Upserting horses...')
-        upsert_master.MasterDataUpsert().upsert_horses(horses)
-
-        print('  - Upserting jockeys...')
-        upsert_master.MasterDataUpsert().upsert_jockeys(jockeys)
-
-        print('  - Upserting trainers...')
-        upsert_master.MasterDataUpsert().upsert_trainers(trainers)
-
-        print('  - Upserting races...')
-        upsert_race.RaceUpsert().upsert_races(races)
-
-        print('  - Upserting entries...')
-        upsert_entry.EntryUpsert().upsert_entries(entries)
-
-        print('  - Building metrics...')
-        from metrics import build_horse_metrics
-        build_horse_metrics.build_all_horse_metrics(incremental=False)
-
-        print('✓ ETL complete')
-
-    except Exception as e:
-        print(f'✗ ETL failed: {e}')
-        import traceback
-        traceback.print_exc()
-        return False
-
-    # Step 4: Check training data
-    print()
-    print('Step 4: Checking training data availability...')
-    try:
-        from app import db
-        conn = db.get_connection()
-        cursor = conn.cursor()
-
-        cursor.execute('''
-            SELECT COUNT(*) as total,
-                   SUM(CASE WHEN finish_pos IS NOT NULL THEN 1 ELSE 0 END) as with_results
-            FROM race_entries
-        ''')
-        total, with_results = cursor.fetchone()
-        print(f'✓ Total entries: {total}')
-        print(f'✓ Entries with results: {with_results}')
-
-        # Check if sufficient for TimeSeriesSplit
-        if with_results >= 50:
-            print('✓ SUFFICIENT data for TimeSeriesSplit (3 splits)')
-        else:
-            print(f'✗ INSUFFICIENT data: {with_results} < 50 required')
-            return False
-
+        cur = conn.cursor()
+        races_count = cur.execute("SELECT COUNT(*) FROM races").fetchone()[0]
+        entries_count = cur.execute("SELECT COUNT(*) FROM race_entries").fetchone()[0]
+        finished_count = cur.execute(
+            "SELECT COUNT(*) FROM race_entries WHERE finish_pos IS NOT NULL"
+        ).fetchone()[0]
+        metrics_count = cur.execute("SELECT COUNT(*) FROM horse_metrics").fetchone()[0]
+    finally:
         conn.close()
 
-    except Exception as e:
-        print(f'✗ Training data check failed: {e}')
-        import traceback
-        traceback.print_exc()
-        return False
+    assert races_count == len(populated_db["races"])
+    # 処理件数（entry_count）は INSERT OR REPLACE の置換分だけ実行数より多くなる
+    assert entries_count == populated_db["entries_rows"] > 0
+    assert populated_db["entry_count"] >= entries_count
+    # TimeSeriesSplit（3分割）に足る結果付きエントリがあること
+    assert finished_count >= 50
+    assert metrics_count > 0
 
-    # Step 5: Test prediction model training
-    print()
-    print('Step 5: Testing LightGBM model training...')
+
+def test_model_training_with_cv(populated_db, tmp_path):
+    """LightGBMモデルの訓練（TimeSeriesSplit）が一時DBで完走すること
+
+    モデルの保存先は一時ディレクトリへ付け替え、本番のモデルファイル
+    （data/prediction_model_advanced.pkl）を上書きしない。
+    """
+    from app import prediction_model_lightgbm as pml
+
+    model = pml.AdvancedRacePredictionModel()
+    model.model_path = tmp_path / "prediction_model_advanced.pkl"
+    model.scaler_path = tmp_path / "prediction_scaler_advanced.pkl"
+    model.is_trained = False
+
+    results = model.train_with_cross_validation()
+
+    assert model.is_trained
+    assert len(results["cv_scores"]) == 5
+    assert 0.0 <= results["mean_cv_accuracy"] <= 1.0
+    assert results["training_samples"] >= 50
+    # 保存先が一時ディレクトリであること
+    assert model.model_path.exists()
+    assert model.scaler_path.exists()
+
+
+@pytest.mark.parametrize("table", ["horses", "jockeys", "trainers", "races", "race_entries"])
+def test_master_tables_populated(populated_db, table):
+    """マスタ系テーブルにデータが入っていること"""
+    conn = app_db.get_connection(read_only=True)
     try:
-        from app import prediction_model_lightgbm as pml
-
-        model = pml.AdvancedRacePredictionModel()
-        print(f'✓ Model initialized ({model.model_name})')
-
-        if not model.is_trained:
-            print('  Training model with TimeSeriesSplit...')
-            cv_results = model.train_with_cross_validation()
-            print(f'✓ Model trained')
-            print(f'  - Mean CV accuracy: {cv_results["mean_cv_accuracy"]:.4f}')
-            print(f'  - Std CV accuracy: {cv_results["std_cv_accuracy"]:.4f}')
-            print(f'  - Fold scores: {[f"{s:.4f}" for s in cv_results["cv_scores"]]}')
-        else:
-            print('✓ Model already trained')
-
-    except Exception as e:
-        print(f'✗ Model training failed: {e}')
-        import traceback
-        traceback.print_exc()
-        return False
-
-    print()
-    print('=' * 60)
-    print('ALL TESTS PASSED ✓')
-    print('=' * 60)
-    return True
-
-if __name__ == '__main__':
-    success = main()
-    sys.exit(0 if success else 1)
+        count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+    finally:
+        conn.close()
+    assert count > 0

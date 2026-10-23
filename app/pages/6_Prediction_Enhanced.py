@@ -16,7 +16,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 # パス設定
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # プロジェクトルート（app/legacy の解決用）
 
 from app import queries, prediction_model_lightgbm as pml
 from app import backtest as bt
@@ -51,7 +51,7 @@ with col4:
         st.switch_page("pages/4_ModelTraining.py")
 with col5:
     if st.button("🔮 予測", use_container_width=True):
-        st.switch_page("pages/5_Prediction.py")
+        st.switch_page("pages/6_Prediction_Enhanced.py")
 with col6:
     if st.button("💰 推奨", use_container_width=True, disabled=True):
         pass
@@ -172,7 +172,7 @@ with tab2:
                 if model_choice == "LightGBM（推奨）":
                     model = pml.AdvancedRacePredictionModel()
                 else:
-                    from app import prediction_model as pm
+                    from legacy import prediction_model as pm
 
                     model = pm.RacePredictionModel()
 

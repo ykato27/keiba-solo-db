@@ -3,8 +3,12 @@ Streamlit サイドバーユーティリティ
 全ページで統一されたサイドバーを提供
 """
 
+import logging
+
 import streamlit as st
 from app import queries, db as db_module
+
+logger = logging.getLogger(__name__)
 
 
 def render_sidebar():
@@ -29,7 +33,9 @@ def render_sidebar():
             cursor.execute("SELECT COUNT(*) FROM horses")
             total_horses = cursor.fetchone()[0]
             conn.close()
-        except:
+        except Exception:
+            # 登録馬数が取れない場合もサイドバー自体は表示を継続する
+            logger.exception("登録馬数の取得に失敗しました")
             total_horses = 0
 
         col1, col2 = st.sidebar.columns(2)
@@ -37,7 +43,8 @@ def render_sidebar():
             st.metric("開催日数", all_races, help="登録済みの開催日数")
         with col2:
             st.metric("登録馬数", total_horses, help="登録済みの馬の総数")
-    except:
+    except Exception:
+        logger.exception("サイドバーのデータ統計取得に失敗しました")
         st.sidebar.warning("⚠️ データベースエラー")
 
     st.sidebar.markdown("---")
@@ -53,7 +60,7 @@ def render_sidebar():
     st.sidebar.button(
         "🔮 レース予測",
         use_container_width=True,
-        on_click=lambda: st.switch_page("pages/5_Prediction.py"),
+        on_click=lambda: st.switch_page("pages/6_Prediction_Enhanced.py"),
     )
     st.sidebar.button(
         "💰 馬券推奨",

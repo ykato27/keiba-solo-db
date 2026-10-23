@@ -4,30 +4,26 @@ ETL処理の基本クラスと共通機能
 
 import sqlite3
 import logging
-from pathlib import Path
 from typing import Optional
+
+from app import db as app_db
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = Path(__file__).parent.parent / "data" / "keiba.db"
+# 後方互換のための再エクスポート。正は app.db.DB_PATH。
+DB_PATH = app_db.DB_PATH
 
 
 class ETLBase:
     """ETL処理の基本クラス"""
 
     def __init__(self):
-        self.db_path = DB_PATH
+        # app.db.DB_PATH を生成時点の値で参照する（テストでの差し替えに対応）
+        self.db_path = app_db.DB_PATH
 
     def get_connection(self, read_only: bool = False) -> sqlite3.Connection:
-        """データベース接続を取得"""
-        if read_only:
-            uri = f"file:{self.db_path}?mode=ro"
-            conn = sqlite3.connect(uri, uri=True, timeout=10)
-        else:
-            conn = sqlite3.connect(str(self.db_path), timeout=10)
-
-        conn.row_factory = sqlite3.Row
-        return conn
+        """データベース接続を取得（app.db.get_connection に委譲）"""
+        return app_db.get_connection(read_only=read_only, db_path=self.db_path)
 
     def execute_query(self, query: str, params: tuple = (), fetch: bool = False):
         """クエリを実行"""

@@ -15,19 +15,11 @@ CRITICAL改善：オッズデータ統合のためのスキーマ拡張
 
 import sqlite3
 import logging
-from pathlib import Path
 from typing import Dict, List, Any
 
+from app import db as app_db
+
 logger = logging.getLogger(__name__)
-
-DB_PATH = Path(__file__).parent.parent / "data" / "keiba.db"
-
-
-def get_connection():
-    """データベース接続を取得"""
-    conn = sqlite3.connect(str(DB_PATH), timeout=10)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 
 def check_column_exists(conn: sqlite3.Connection, table: str, column: str) -> bool:
@@ -55,7 +47,7 @@ def check_column_exists(conn: sqlite3.Connection, table: str, column: str) -> bo
 
 def migrate_add_odds_columns():
     """race_entriesテーブルにオッズ関連カラムを追加"""
-    conn = get_connection()
+    conn = app_db.get_connection()
     cursor = conn.cursor()
 
     migration_results = {
@@ -115,7 +107,7 @@ def migrate_add_odds_columns():
 
 def create_race_odds_table():
     """race_oddsテーブルを作成（時系列オッズ追跡）"""
-    conn = get_connection()
+    conn = app_db.get_connection()
     cursor = conn.cursor()
 
     create_sql = """
@@ -153,7 +145,7 @@ def create_race_odds_table():
 
 def create_odds_indexes():
     """オッズテーブルのインデックスを作成"""
-    conn = get_connection()
+    conn = app_db.get_connection()
     cursor = conn.cursor()
 
     indexes = [
@@ -249,7 +241,7 @@ def run_all_migrations() -> Dict[str, Any]:
 
 def verify_schema_updated() -> bool:
     """スキーマの更新を検証"""
-    conn = get_connection()
+    conn = app_db.get_connection()
     cursor = conn.cursor()
 
     required_columns = [

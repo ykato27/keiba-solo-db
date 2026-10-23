@@ -73,8 +73,8 @@ keiba-solo-db/
     keiba.db                     # SQLiteデータベース
     logs/                        # スクレイピングログ
 
-  requirements.txt               # Python依存関係
-  pyproject.toml                 # Black, isort, pytest設定
+  pyproject.toml                 # 依存関係（uv）・Black, isort, pytest設定
+  uv.lock                        # 依存関係のロックファイル（uv が生成）
   mypy.ini                       # 型チェック設定
   .flake8                        # スタイル設定
   lint.bat / lint.sh             # コード品質チェックスクリプト
@@ -84,30 +84,28 @@ keiba-solo-db/
 
 ### 前提条件
 
-- Python 3.9以上
 - Git
-- [uv](https://docs.astral.sh/uv/) - Python パッケージマネージャー
+- [uv](https://docs.astral.sh/uv/) - Python パッケージ・仮想環境マネージャー
+  - Python本体（3.11以上）も uv が自動で用意するため、事前のPythonインストールは不要
 
 ### セットアップ
+
+依存関係は `pyproject.toml` に一本化されています（旧 `requirements.txt` は廃止）。
+正確なバージョンは `uv.lock` で固定されます。
 
 ```bash
 # リポジトリをクローン
 git clone <repo-url>
 cd keiba-solo-db
 
-# uv で依存関係をインストール（仮想環境自動作成）
+# 依存関係をインストール（.venv を自動作成。開発用依存も含む）
 uv sync
 
-# 仮想環境を有効化
-source .venv/bin/activate  # macOS/Linux
-# または
-.venv\Scripts\activate  # Windows
-
 # データベーススキーマを初期化
-python -c "from app.db import init_schema; init_schema()"
+uv run python -c "from app.db import init_schema; init_schema()"
 
-# Streamlitアプリを起動
-streamlit run app/Home.py
+# Streamlitアプリを起動（仮想環境の有効化は不要。uv run が .venv を使う）
+uv run streamlit run app/Home.py
 ```
 
 ## 使い方
@@ -118,28 +116,28 @@ streamlit run app/Home.py
 
 ```bash
 # レースカレンダーを取得
-python -m scraper.fetch_calendar --start 2019 --end 2024
+uv run python -m scraper.fetch_calendar --start 2019 --end 2024
 
 # 出馬表を取得
-python -m scraper.fetch_card --years 2019 2020 2021 2022 2023 2024
+uv run python -m scraper.fetch_card --years 2019 2020 2021 2022 2023 2024
 
 # レース結果を取得
-python -m scraper.fetch_result --years 2019 2020 2021 2022 2023 2024
+uv run python -m scraper.fetch_result --years 2019 2020 2021 2022 2023 2024
 
 # ETL処理を実行
-python -m etl.upsert_master
-python -m etl.upsert_race
-python -m etl.upsert_entry
-python -m etl.apply_alias
+uv run python -m etl.upsert_master
+uv run python -m etl.upsert_race
+uv run python -m etl.upsert_entry
+uv run python -m etl.apply_alias
 
 # 指標を計算
-python -m metrics.build_horse_metrics
+uv run python -m metrics.build_horse_metrics
 ```
 
 ### 2. Streamlitアプリで利用
 
 ```bash
-streamlit run app/Home.py
+uv run streamlit run app/Home.py
 ```
 
 ブラウザが開き、http://localhost:8501 でアプリが表示されます。
@@ -235,17 +233,17 @@ sqlite3 data/keiba.db ".schema"
 
 # スキーマをリセット（注意: データが削除されます）
 rm data/keiba.db
-python -c "from app.db import init_schema; init_schema()"
+uv run python -c "from app.db import init_schema; init_schema()"
 ```
 
 ### Streamlit起動エラー
 
 ```bash
 # キャッシュをクリア
-streamlit cache clear
+uv run streamlit cache clear
 
-# 依存関係を確認
-pip install -r requirements.txt --upgrade
+# 依存関係をロックファイルどおりに再構築
+uv sync
 ```
 
 ### import エラー（app.lib が見つからない）

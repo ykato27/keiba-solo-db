@@ -112,21 +112,30 @@ DB_PATH = _PROJECT_ROOT / "data" / "keiba.db"
 SCHEMA_PATH = _PROJECT_ROOT / "sql" / "schema.sql"
 
 
-def get_connection(read_only: bool = False) -> sqlite3.Connection:
+def get_connection(
+    read_only: bool = False, db_path: Optional[Path] = None
+) -> sqlite3.Connection:
     """データベース接続を取得
+
+    プロジェクト全体のDB接続はこの関数に集約する。
+    接続設定（timeout、row_factory）を変更する場合はここだけを直すこと。
 
     Args:
         read_only: 読み取り専用モードかどうか
+        db_path: 接続先DBファイル。None の場合は標準の DB_PATH を使う
+            （テストで一時DBへ差し替える場合などに指定する）
 
     Returns:
         sqlite3.Connection
     """
+    target = db_path if db_path is not None else DB_PATH
+
     # 読み取り専用モード: URIを使用
     if read_only:
-        uri = f"file:{DB_PATH}?mode=ro"
+        uri = f"file:{target}?mode=ro"
         conn = sqlite3.connect(uri, uri=True, timeout=10)
     else:
-        conn = sqlite3.connect(str(DB_PATH), timeout=10)
+        conn = sqlite3.connect(str(target), timeout=10)
 
     # Row factory を設定（辞書アクセスを可能にする）
     conn.row_factory = sqlite3.Row

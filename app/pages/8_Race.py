@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 # 親ディレクトリを sys.path に追加
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # プロジェクトルート（app/legacy の解決用）
 
 import db
 import queries
@@ -71,7 +71,7 @@ with col4:
 
 with col5:
     if st.button("🔮 予測", use_container_width=True):
-        st.switch_page("pages/5_Prediction.py")
+        st.switch_page("pages/6_Prediction_Enhanced.py")
 
 with col6:
     if st.button("💰 推奨", use_container_width=True):

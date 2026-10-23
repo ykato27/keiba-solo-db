@@ -16,7 +16,7 @@ if str(project_root) not in sys.path:
 from app import db
 from app import queries
 from app import charts
-from app import test_data
+from app import demo_data
 from app import progress_utils
 
 # ページ設定
@@ -76,11 +76,11 @@ years = st.sidebar.slider("対象年数", 1, 5, 3, help="投入する過去年�
 if st.sidebar.button("📥 本番データを投入", use_container_width=True):
     with st.sidebar.status("処理中...", expanded=True) as status:
         st.write(f"📊 {years}年分のデータを生成中...")
-        races = test_data.generate_test_races(years=years)
-        horses = test_data.generate_test_horses(count=150 + years * 30)
-        jockeys = test_data.generate_test_jockeys(count=40 + years * 10)
-        trainers = test_data.generate_test_trainers(count=40 + years * 10)
-        entries = test_data.generate_test_entries(races, horses, jockeys, trainers)
+        races = demo_data.generate_test_races(years=years)
+        horses = demo_data.generate_test_horses(count=150 + years * 30)
+        jockeys = demo_data.generate_test_jockeys(count=40 + years * 10)
+        trainers = demo_data.generate_test_trainers(count=40 + years * 10)
+        entries = demo_data.generate_test_entries(races, horses, jockeys, trainers)
 
         st.write(f"✅ レース: {len(races):,}件")
         st.write(f"✅ 馬: {len(horses):,}件")

@@ -1,17 +1,43 @@
-[build-system]
-requires = ["setuptools>=65.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "keiba-solo-db"
 version = "1.0.0"
 description = "Horse racing prediction system with SQLite and Streamlit"
-authors = [{name = "Development Team"}]
-requires-python = ">=3.9"
+readme = "README.md"
+authors = [{ name = "Development Team" }]
+requires-python = ">=3.11"
+dependencies = [
+    "streamlit>=1.28.0",
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=4.9.0",
+    "pandas>=2.1.0",
+    "numpy>=1.24.0",
+    "plotly>=5.17.0",
+    "python-dateutil>=2.8.2",
+    "scikit-learn>=1.3.0",
+    "lightgbm>=4.0.0",
+    "statsmodels>=0.14",
+    "pyyaml>=6.0",
+]
+
+# 開発用依存（uv の dependency-groups。`uv sync` で本体と一緒にインストールされる）
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "mypy>=1.7.0",
+    "black>=23.12.0",
+    "flake8>=6.1.0",
+]
+
+# アプリケーション型プロジェクト: このリポジトリ自体はパッケージとして
+# インストールせず、依存解決と実行環境（.venv）の管理だけを uv に任せる。
+[tool.uv]
+package = false
 
 [tool.black]
 line-length = 100
-target-version = ["py39", "py310", "py311"]
+target-version = ["py311", "py312"]
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -31,7 +57,7 @@ extend-exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
@@ -78,4 +104,4 @@ exclude = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
-addopts = "--cov=app --cov-report=html --cov-report=term-missing"
+addopts = "--cov=app --cov-report=term-missing"

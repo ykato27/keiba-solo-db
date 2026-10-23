@@ -1,138 +1,86 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+"""予測ページの機能テスト（pytest形式、Streamlit UIなし）
+
+旧版はスクリプト形式で本番DBに依存していた。現在は一時DBのデモデータで検証する。
+
+既知の問題: リポジトリ同梱の data/prediction_model_advanced.pkl は旧
+scikit-learn で作成された GradientBoosting の pickle で、現行 scikit-learn
+（_loss モジュールの廃止）では読み込めない。そのため同梱モデルは
+「未訓練」と判定される。再学習して pkl を差し替えれば下の xfail は xpass
+になり、気づけるようになっている。
 """
-Test Prediction.py without Streamlit UI
-Validates that the prediction model can be used correctly
-"""
 
-import sys
-import io
-from pathlib import Path
+import pytest
 
-# Set up path
-project_root = Path.cwd()
-sys.path.insert(0, str(project_root))
+from app import prediction_model_lightgbm as pml
+from app import queries
 
-# Fix for Windows console encoding
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-def main():
-    print('=' * 60)
-    print('PREDICTION PAGE FUNCTIONALITY TEST')
-    print('=' * 60)
-    print()
+@pytest.mark.xfail(
+    reason="同梱pklが旧scikit-learn形式で現行環境では読み込めない（要再学習）",
+    strict=False,
+)
+def test_saved_model_loads():
+    """同梱の学習済みモデル（data/*.pkl）が読み込めること"""
+    model = pml.AdvancedRacePredictionModel()
+    assert model.get_model_info()["is_trained"] is True
 
-    # Step 1: Test model loading
-    print('Step 1: Testing LightGBM model loading...')
-    try:
-        from app import prediction_model_lightgbm as pml
 
-        model = pml.get_advanced_prediction_model()
-        print(f'✓ Model loaded: {model.model_name}')
-        print(f'✓ Model trained: {model.is_trained}')
+def test_model_class_degrades_gracefully():
+    """同梱モデルが読めなくても、例外なくインスタンス化できること"""
+    model = pml.AdvancedRacePredictionModel()
+    info = model.get_model_info()
+    assert info["n_features"] > 0
+    assert model.model_name
 
-    except Exception as e:
-        print(f'✗ Model loading failed: {e}')
-        import traceback
-        traceback.print_exc()
-        return False
 
-    # Step 2: Test queries module
-    print()
-    print('Step 2: Testing query functions...')
-    try:
-        from app import queries
+def test_queries_against_populated_db(populated_db):
+    """クエリ関数が一時DBのデモデータを正しく返すこと"""
+    dates = queries.get_all_race_dates()
+    assert len(dates) == len({r["race_date"] for r in populated_db["races"]})
 
-        # Get race dates
-        dates = queries.get_all_race_dates()
-        if dates:
-            print(f'✓ Found {len(dates)} race dates')
-            test_date = dates[0]
-            print(f'  Testing with date: {test_date}')
+    courses = queries.get_courses_by_date(dates[0])
+    assert courses
 
-            # Get courses for this date
-            courses = queries.get_courses_by_date(test_date)
-            if courses:
-                print(f'✓ Found {len(courses)} courses for {test_date}')
-                test_course = courses[0]
+    races = queries.get_races(dates[0], courses[0])
+    assert races
 
-                # Get races
-                races = queries.get_races(test_date, test_course)
-                if races:
-                    print(f'✓ Found {len(races)} races for {test_date} at {test_course}')
-                    test_race_id = races[0]['race_id']
+    entries = queries.get_race_entries_with_metrics(races[0]["race_id"])
+    assert len(entries) > 0
+    assert all("horse_name" in e for e in entries)
 
-                    # Get entries with metrics
-                    entries = queries.get_race_entries_with_metrics(test_race_id)
-                    if entries:
-                        print(f'✓ Found {len(entries)} entries for race {test_race_id}')
-                    else:
-                        print('✗ No entries found for test race')
-                        return False
-                else:
-                    print('✗ No races found')
-                    return False
-            else:
-                print('✗ No courses found for test date')
-                return False
-        else:
-            print('✗ No race dates found')
-            return False
 
-    except Exception as e:
-        print(f'✗ Query test failed: {e}')
-        import traceback
-        traceback.print_exc()
-        return False
+@pytest.fixture()
+def trained_model(populated_db, tmp_path):
+    """一時DBで学習したモデル（保存先は一時ディレクトリへ付け替え）"""
+    model = pml.AdvancedRacePredictionModel()
+    model.model_path = tmp_path / "prediction_model_advanced.pkl"
+    model.scaler_path = tmp_path / "prediction_scaler_advanced.pkl"
+    model.is_trained = False
+    model.train_with_cross_validation()
+    return model
 
-    # Step 3: Test prediction
-    print()
-    print('Step 3: Testing race order prediction...')
-    try:
-        horse_ids = [e['horse_id'] for e in entries if e['horse_id']]
-        if not horse_ids:
-            print('✗ No valid horse IDs found')
-            return False
 
-        print(f'  Predicting for {len(horse_ids)} horses...')
+def test_predict_race_order(populated_db, trained_model):
+    """学習済みモデルで一時DBのレースを予測し、結果構造が返ること"""
+    assert trained_model.is_trained
 
-        # Get race info
-        race = next((r for r in races if r['race_id'] == test_race_id), None)
-        race_info = {
-            'distance_m': race.get('distance_m') if race else 0,
-            'surface': race.get('surface') if race else '',
-        } if race else None
+    dates = queries.get_all_race_dates()
+    races = queries.get_races(dates[0], queries.get_courses_by_date(dates[0])[0])
+    race = races[0]
+    entries = queries.get_race_entries_with_metrics(race["race_id"])
+    horse_ids = [e["horse_id"] for e in entries if e["horse_id"]]
 
-        # Run prediction
-        results = model.predict_race_order(horse_ids[:10], race_info=race_info)
+    results = trained_model.predict_race_order(
+        horse_ids[:10],
+        race_info={"distance_m": race.get("distance_m"), "surface": race.get("surface")},
+    )
 
-        if 'predictions' in results:
-            predictions = results['predictions']
-            print(f'✓ Prediction completed for {len(predictions)} horses')
-            print(f'  Model type: {results.get("model_type")}')
-
-            if predictions:
-                top_pred = predictions[0]
-                print(f'  Top prediction: {top_pred["horse_name"]} (confidence: {top_pred["confidence"]:.1f}%)')
-        elif 'error' in results:
-            print(f'✗ Prediction error: {results["error"]}')
-            return False
-        else:
-            print('✗ Unknown prediction result format')
-            return False
-
-    except Exception as e:
-        print(f'✗ Prediction test failed: {e}')
-        import traceback
-        traceback.print_exc()
-        return False
-
-    print()
-    print('=' * 60)
-    print('ALL PREDICTION TESTS PASSED ✓')
-    print('=' * 60)
-    return True
-
-if __name__ == '__main__':
-    success = main()
-    sys.exit(0 if success else 1)
+    assert "predictions" in results
+    predictions = results["predictions"]
+    assert len(predictions) == len(horse_ids[:10])
+    for pred in predictions:
+        assert 0.0 <= pred["confidence"] <= 100.0
+        assert pred["win_probability"] >= 0.0
+    # 信頼度の降順にソートされていること
+    confidences = [p["confidence"] for p in predictions]
+    assert confidences == sorted(confidences, reverse=True)

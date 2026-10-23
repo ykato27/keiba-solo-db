@@ -48,7 +48,7 @@ with col4:
 
 with col5:
     if st.button("🔮 予測", use_container_width=True):
-        st.switch_page("pages/5_Prediction.py")
+        st.switch_page("pages/6_Prediction_Enhanced.py")
 
 with col6:
     if st.button("💰 推奨", use_container_width=True):

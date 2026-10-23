@@ -10,20 +10,16 @@ app/db.py とは異なり、頻繁にアクセスされるクエリを Streamlit
 """
 
 import streamlit as st
-import sqlite3
 from typing import List, Dict, Any
-from pathlib import Path
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = _PROJECT_ROOT / "data" / "keiba.db"
+from app import db
 
 
 @st.cache_data(ttl=3600)  # 1時間キャッシュ
 def get_all_race_dates() -> List[str]:
     """全開催日を取得"""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = db.get_connection(read_only=True)
     try:
-        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT race_date FROM races ORDER BY race_date DESC")
         dates = [row[0] for row in cursor.fetchall()]
@@ -35,9 +31,8 @@ def get_all_race_dates() -> List[str]:
 @st.cache_data(ttl=3600)
 def get_courses_by_date(race_date: str) -> List[str]:
     """指定日の開催場一覧を取得"""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = db.get_connection(read_only=True)
     try:
-        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
             "SELECT DISTINCT course FROM races WHERE race_date = ? ORDER BY course",
@@ -52,9 +47,8 @@ def get_courses_by_date(race_date: str) -> List[str]:
 @st.cache_data(ttl=3600)
 def get_races(race_date: str, course: str) -> List[Dict[str, Any]]:
     """指定日時の開催場のレース一覧を取得"""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = db.get_connection(read_only=True)
     try:
-        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -81,9 +75,8 @@ def get_races(race_date: str, course: str) -> List[Dict[str, Any]]:
 @st.cache_data(ttl=1800)  # 30分キャッシュ
 def get_race_entries_with_metrics(race_id: int) -> List[Dict[str, Any]]:
     """レースの出走馬を指標付きで取得"""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = db.get_connection(read_only=True)
     try:
-        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -130,9 +123,8 @@ def get_race_entries_with_metrics(race_id: int) -> List[Dict[str, Any]]:
 @st.cache_data(ttl=3600)
 def get_horse_details(horse_id: int) -> Dict[str, Any]:
     """馬の詳細情報を取得"""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = db.get_connection(read_only=True)
     try:
-        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -164,9 +156,8 @@ def get_horse_details(horse_id: int) -> Dict[str, Any]:
 @st.cache_data(ttl=3600)
 def get_horse_race_history(horse_id: int, limit: int = 50) -> List[Dict[str, Any]]:
     """馬の過去成績を取得"""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = db.get_connection(read_only=True)
     try:
-        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
             """

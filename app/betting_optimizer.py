@@ -291,7 +291,7 @@ class BettingOptimizer:
             "expected_total_profit": total_profit,
             "expected_total_roi": total_roi,
             "num_bets": len(recommendations),
-            "kelly_efficiency": self._calculate_kelly_efficiency(recommendations),
+            "kelly_efficiency": BettingOptimizer._calculate_kelly_efficiency(recommendations),
         }
 
     @staticmethod
@@ -323,7 +323,7 @@ def recommend_bets(
         (推奨配分, ポートフォリオ統計)
     """
     optimizer = BettingOptimizer()
-    recommendations = optimizer.optimize_portfolio(
+    recommendations, _validation = optimizer.optimize_portfolio(
         predictions, total_budget=budget, min_probability=min_probability
     )
     stats = optimizer.calculate_portfolio_stats(recommendations)

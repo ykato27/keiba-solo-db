@@ -45,3 +45,10 @@ data/logs/*.json
 # Local SQLite backups
 *.db-shm
 *.db-wal
+
+# uv
+.venv/
+
+# Coverage
+.coverage
+htmlcov/

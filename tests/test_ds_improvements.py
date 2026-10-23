@@ -1,215 +1,149 @@
-"""
-Data Scientist 改善の統合テスト
+"""Data Scientist 改善機能のテスト（pytest形式）
 
-Feature Diagnostics と Model Training Enhanced の
-機能を統合的にテストします。
-
-実行方法:
-    python test_ds_improvements.py
+旧版は結果を print するだけで assert が無く、しかも本番DBへ直接テストデータを
+書き込んでいた。ここでは合成データに対する既知の出力を検証する。
 """
 
-import sys
-from pathlib import Path
 import numpy as np
-
-# パス設定
-sys.path.insert(0, str(Path(__file__).parent))
+import pytest
 
 from app import features as feat_module
-from app.feature_diagnostics import FeatureDiagnostics, diagnose_features_simple
-from app.test_data import generate_test_horses, generate_test_entries, generate_test_races
-from app import queries, db as app_db
+from app.feature_diagnostics import FeatureDiagnostics
 from app.model_training_enhanced import ModelTrainingEnhanced
 
 
-def test_feature_diagnostics():
-    """特徴量診断のテスト"""
-    print("=" * 80)
-    print("🧪 テスト 1: 特徴量診断 (VIF, 相関, 分散)")
-    print("=" * 80)
-
-    # テストデータ生成
-    print("\n📊 テストデータを生成中...")
-    conn = app_db.get_connection()
-    races = generate_test_races(years=1)
-    for race in races[:100]:  # 最初の100レース
-        conn.execute("""
-            INSERT OR IGNORE INTO races
-            (race_id, race_date, course, race_no, distance_m, surface, going, grade, title)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            f"{race['race_date'].replace('-', '')}{str(races.index(race)).zfill(4)}",
-            race['race_date'], race['course'], race['race_no'],
-            race['distance_m'], race['surface'], race.get('going'), race.get('grade'), race['title']
-        ))
-    conn.commit()
-
-    # 馬と出走データを生成
-    horses = generate_test_horses(count=50)
-    for horse in horses:
-        conn.execute("""
-            INSERT OR IGNORE INTO horses (horse_id, raw_name, sex, birth_year)
-            VALUES (?, ?, ?, ?)
-        """, (horse['horse_id'], horse['raw_name'], horse['sex'], horse['birth_year']))
-    conn.commit()
-
-    # 特徴量を抽出
-    print("\n🔧 特徴量を抽出中...")
-    X_list = []
-    for horse in horses[:30]:
-        try:
-            features = feat_module.extract_features_for_horse(horse)
-            X_list.append(list(features.values()))
-        except Exception as e:
-            print(f"  特徴量抽出エラー: {e}")
-
-    if not X_list:
-        print("❌ 特徴量を抽出できませんでした")
-        return
-
-    X = np.array(X_list)
-    feature_names = feat_module.get_feature_names()
-
-    print(f"✅ {len(X)} サンプル × {X.shape[1]} 特徴量を抽出")
-
-    # VIF 分析
-    print("\n📈 VIF分析を実行中...")
-    diag = FeatureDiagnostics()
-    vif_results = diag.calculate_vif(X, feature_names)
-    print("\n🔴 VIF が高い特徴量（VIF > 5）:")
-    high_vif = vif_results[vif_results['VIF'] > 5]
-    if len(high_vif) > 0:
-        for _, row in high_vif.iterrows():
-            print(f"  - {row['Feature']}: {row['VIF']:.2f}")
-    else:
-        print("  なし（良好）")
-
-    # 相関分析
-    print("\n🔗 相関分析を実行中...")
-    corr_pairs = diag.find_highly_correlated_pairs(X, feature_names, threshold=0.8)
-    if corr_pairs:
-        print(f"  高相関ペア（r > 0.8）: {len(corr_pairs)} 件")
-        for pair in corr_pairs[:5]:
-            print(f"  - {pair['Feature 1']} ↔ {pair['Feature 2']}: {pair['Correlation']:.3f}")
-    else:
-        print("  なし（良好）")
-
-    # 分散分析
-    print("\n📊 分散分析を実行中...")
-    variance_results = diag.check_feature_variance(X, feature_names)
-    print("  分散が極端に小さい特徴量:")
-    low_var = variance_results[variance_results['Variance'] < 0.01]
-    if len(low_var) > 0:
-        for _, row in low_var.iterrows():
-            print(f"  - {row['Feature']}: var={row['Variance']:.6f}")
-    else:
-        print("  なし（良好）")
-
-    print("\n✅ 特徴量診断完了")
-    return X, feature_names
-
-
-def test_learning_curve_diagnostics():
-    """Learning Curve と過学習診断のテスト"""
-    print("\n" + "=" * 80)
-    print("🧪 テスト 2: Learning Curve と過学習診断")
-    print("=" * 80)
-
-    # ダミーの損失データを生成（訓練と検証）
-    print("\n📊 ダミー訓練履歴を生成中...")
-    num_rounds = 100
-
-    # 正常な学習曲線
-    train_losses = [0.9 - 0.008 * i + np.random.normal(0, 0.01) for i in range(num_rounds)]
-    val_losses = [0.9 - 0.007 * i + np.random.normal(0, 0.015) for i in range(num_rounds)]
-
-    print(f"✅ {num_rounds} ラウンドの訓練履歴を生成")
-
-    # 過学習診断
-    print("\n🔍 Learning Curve 分析を実行中...")
-    diagnosis = ModelTrainingEnhanced.analyze_learning_curve(train_losses, val_losses)
-
-    print(f"\n結果:")
-    print(f"  最終訓練損失: {diagnosis['final_train_loss']:.4f}")
-    print(f"  最終検証損失: {diagnosis['final_val_loss']:.4f}")
-    print(f"  汎化ギャップ: {diagnosis['generalization_gap']:.4f}")
-    print(f"  状態: {diagnosis['status']}")
-    print(f"  推奨: {diagnosis['recommendation']}")
-
-    print("\n✅ Learning Curve 分析完了")
-
-
-def test_fold_metrics():
-    """Fold ごとのメトリクス計算テスト"""
-    print("\n" + "=" * 80)
-    print("🧪 テスト 3: Fold ごとのメトリクス計算")
-    print("=" * 80)
-
-    # ダミーのテスト結果を生成
-    print("\n📊 ダミーテスト結果を生成中...")
-    n_folds = 5
-    y_true_list = []
-    y_pred_list = []
-    y_pred_proba_list = []
-
-    for fold_idx in range(n_folds):
-        n_samples = 100
-        y_true = np.random.randint(0, 3, n_samples)
-        y_pred = np.where(
-            np.random.random(n_samples) > 0.3,
-            y_true,
-            np.random.randint(0, 3, n_samples)
-        )
-        y_proba = np.random.dirichlet([1, 1, 1], n_samples)
-
-        y_true_list.append(y_true)
-        y_pred_list.append(y_pred)
-        y_pred_proba_list.append(y_proba)
-
-    print(f"✅ {n_folds} Fold のテスト結果を生成")
-
-    # メトリクス計算
-    print("\n📈 メトリクスを計算中...")
-    metrics = ModelTrainingEnhanced.compute_fold_wise_metrics(
-        y_true_list, y_pred_list, y_pred_proba_list
+@pytest.fixture()
+def synthetic_matrix():
+    """a と完全相関する列・定数列を含む合成特徴量行列"""
+    rng = np.random.default_rng(42)
+    a = rng.normal(size=200)
+    X = np.column_stack(
+        [
+            a,
+            a * 2 + 1,  # a と完全相関
+            rng.normal(size=200),  # 独立なノイズ
+            np.full(200, 3.14),  # 定数列
+        ]
     )
-
-    print(f"\n結果:")
-    print(f"  平均精度: {metrics['mean_accuracy']:.4f} ± {metrics['std_accuracy']:.4f}")
-    print(f"  平均 F1: {metrics['mean_f1_macro']:.4f} ± {metrics['std_f1_macro']:.4f}")
-    print(f"  平均 AUC: {metrics.get('mean_auc', np.nan):.4f}")
-
-    print("\nFold 詳細:")
-    print(metrics['fold_metrics'].to_string(index=False))
-
-    print("\n✅ Fold メトリクス計算完了")
+    names = ["a", "a_dup", "noise", "const"]
+    return X, names
 
 
-def main():
-    """メインテスト実行"""
-    print("\n" + "🚀" * 40)
-    print("データサイエンティスト改善の統合テスト")
-    print("🚀" * 40)
+class TestFeatureDiagnostics:
+    def test_vif_detects_duplicate_columns(self, synthetic_matrix):
+        X, names = synthetic_matrix
+        vif = FeatureDiagnostics.calculate_vif(X, names)
+        by_feature = dict(zip(vif["Feature"], vif["VIF"]))
 
-    try:
-        # テスト 1: 特徴量診断
-        test_feature_diagnostics()
+        # 完全相関のペアは VIF が極端に大きくなる
+        assert by_feature["a"] > 10
+        assert by_feature["a_dup"] > 10
+        # 独立な列は VIF が小さい
+        assert by_feature["noise"] < 2
 
-        # テスト 2: Learning Curve 診断
-        test_learning_curve_diagnostics()
+    def test_correlated_pairs(self, synthetic_matrix):
+        X, names = synthetic_matrix
+        pairs = FeatureDiagnostics.find_highly_correlated_pairs(X, names, threshold=0.8)
 
-        # テスト 3: Fold メトリクス
-        test_fold_metrics()
+        assert len(pairs) == 1
+        assert {pairs[0]["Feature 1"], pairs[0]["Feature 2"]} == {"a", "a_dup"}
+        assert pairs[0]["Correlation"] == pytest.approx(1.0)
 
-        print("\n" + "=" * 80)
-        print("✅ すべてのテストが完了しました")
-        print("=" * 80)
+    def test_variance_detects_constant_column(self, synthetic_matrix):
+        X, names = synthetic_matrix
+        variance = FeatureDiagnostics.check_feature_variance(X, names)
+        by_feature = dict(zip(variance["Feature"], variance["Variance"]))
 
-    except Exception as e:
-        print(f"\n❌ エラーが発生しました: {e}")
-        import traceback
-        traceback.print_exc()
+        assert by_feature["const"] == pytest.approx(0.0, abs=1e-20)
+        assert by_feature["noise"] > 0.5
+
+    def test_correlation_matrix_shape(self, synthetic_matrix):
+        X, names = synthetic_matrix
+        corr = FeatureDiagnostics.calculate_correlation_matrix(X, names)
+        assert corr.shape == (4, 4)
+        assert corr.loc["a", "a_dup"] == pytest.approx(1.0)
+        assert corr.loc["a", "a"] == pytest.approx(1.0)
 
 
-if __name__ == "__main__":
-    main()
+class TestFeatureExtraction:
+    def test_extract_features_known_values(self):
+        horse = {
+            "races_count": 10,
+            "win_rate": 0.2,
+            "place_rate": 0.4,
+            "show_rate": 0.5,
+            "recent_score": 3.0,
+            "distance_pref": '{"win_rate": 0.3, "place_rate": 0.5, "show_rate": 0.6}',
+            "surface_pref": "{}",
+        }
+        features = feat_module.extract_features_for_horse(horse)
+
+        assert features["races_count"] == 10.0
+        assert features["log_races_count"] == pytest.approx(np.log(11))
+        assert features["is_experienced"] == 1.0
+        assert features["is_veteran"] == 0.0
+        # 複合指標: win 0.2*0.5 + place 0.4*0.3 + show 0.5*0.2 = 0.32
+        assert features["strong_record"] == pytest.approx(0.32)
+        # 距離別成績が JSON から読まれる
+        assert features["distance_win_rate"] == pytest.approx(0.3)
+        assert features["has_distance_data"] == 1.0
+
+    def test_feature_vector_matches_feature_names(self):
+        # レース情報・出走情報まで渡すと、正規の特徴量名（41個）と過不足なく一致する
+        horse = {"races_count": 0}
+        features = feat_module.extract_features_for_horse(
+            horse,
+            race_info={"distance_m": 1600, "surface": "芝"},
+            entry_info={
+                "horse_weight": 480,
+                "weight_carried": 57.0,
+                "days_since_last_race": 21,
+                "is_steeplechase": 0,
+                "age": 4,
+            },
+        )
+        vector, names = feat_module.create_feature_vector(features)
+
+        assert len(vector) == len(names) == len(feat_module.get_feature_names())
+        assert set(names) == set(features.keys())
+        assert np.all(np.isfinite(vector))
+
+
+class TestModelTrainingEnhanced:
+    def test_learning_curve_normal(self):
+        # 訓練・検証とも単調に下がる損失 → 汎化ギャップ小
+        train = [0.90 - 0.008 * i for i in range(100)]
+        val = [0.905 - 0.0079 * i for i in range(100)]
+        diagnosis = ModelTrainingEnhanced.analyze_learning_curve(train, val)
+
+        # window_size = max(5, 100 // 10) = 10 の平均が最終損失になる
+        assert diagnosis["final_train_loss"] == pytest.approx(np.mean(train[-10:]))
+        assert diagnosis["generalization_gap"] == pytest.approx(
+            diagnosis["final_val_loss"] - diagnosis["final_train_loss"]
+        )
+        assert diagnosis["status"] == "✅ 正常"
+
+    def test_learning_curve_insufficient_data(self):
+        diagnosis = ModelTrainingEnhanced.analyze_learning_curve([0.5] * 5, [0.5] * 5)
+        assert "サンプル不足" in diagnosis["status"]
+
+    def test_fold_metrics_perfect_prediction(self):
+        y_true = [np.array([0, 1, 2, 0, 1, 2])]
+        y_pred = [np.array([0, 1, 2, 0, 1, 2])]
+        y_proba = [
+            np.array(
+                [
+                    [1.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0],
+                    [1.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0],
+                ]
+            )
+        ]
+        metrics = ModelTrainingEnhanced.compute_fold_wise_metrics(y_true, y_pred, y_proba)
+
+        assert metrics["mean_accuracy"] == pytest.approx(1.0)
+        assert metrics["mean_f1_macro"] == pytest.approx(1.0)
+        assert len(metrics["fold_metrics"]) == 1

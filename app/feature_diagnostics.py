@@ -53,7 +53,7 @@ class FeatureDiagnostics:
         for i in range(X_clean.shape[1]):
             try:
                 vif = variance_inflation_factor(X_clean, i)
-                status = self._vif_status(vif)
+                status = FeatureDiagnostics._vif_status(vif)
                 vif_data.append({"Feature": feature_names[i], "VIF": vif, "Status": status})
             except Exception as e:
                 vif_data.append(
@@ -123,7 +123,7 @@ class FeatureDiagnostics:
                             "Feature 1": feature_names[i],
                             "Feature 2": feature_names[j],
                             "Correlation": corr,
-                            "Recommendation": self._correlation_recommendation(corr),
+                            "Recommendation": FeatureDiagnostics._correlation_recommendation(corr),
                         }
                     )
 
@@ -169,7 +169,7 @@ class FeatureDiagnostics:
                     "Mean": means[i],
                     "Std": np.sqrt(variances[i]),
                     "CV": cv[i],
-                    "Status": self._variance_status(variances[i]),
+                    "Status": FeatureDiagnostics._variance_status(variances[i]),
                 }
             )
 
@@ -208,7 +208,7 @@ class FeatureDiagnostics:
                     "Feature": feature_name,
                     "Missing Count": int(missing_counts[i]),
                     "Missing %": missing_pct[i],
-                    "Status": self._missing_status(missing_pct[i]),
+                    "Status": FeatureDiagnostics._missing_status(missing_pct[i]),
                 }
             )
 

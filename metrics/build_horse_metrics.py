@@ -6,12 +6,14 @@ import logging
 from typing import Dict, Any, Optional, List
 import json
 import sqlite3
-from pathlib import Path
 from collections import defaultdict
+
+from app import db as app_db
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = Path(__file__).parent.parent / "data" / "keiba.db"
+# 後方互換のための再エクスポート。正は app.db.DB_PATH。
+DB_PATH = app_db.DB_PATH
 
 # ========================
 # 指標計算の定義
@@ -38,15 +40,8 @@ POPULARITY_WEIGHT = {
 
 
 def get_connection(read_only: bool = False) -> sqlite3.Connection:
-    """DB接続を取得"""
-    if read_only:
-        uri = f"file:{DB_PATH}?mode=ro"
-        conn = sqlite3.connect(uri, uri=True, timeout=10)
-    else:
-        conn = sqlite3.connect(str(DB_PATH), timeout=10)
-
-    conn.row_factory = sqlite3.Row
-    return conn
+    """DB接続を取得（app.db.get_connection に委譲）"""
+    return app_db.get_connection(read_only=read_only)
 
 
 def build_all_horse_metrics(incremental: bool = False) -> int:

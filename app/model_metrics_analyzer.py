@@ -10,7 +10,11 @@
 5. 予測信頼度の分布
 """
 
+import logging
+
 import numpy as np
+
+logger = logging.getLogger(__name__)
 from typing import Dict, List, Tuple, Any, Optional
 from sklearn.metrics import (
     precision_recall_fscore_support,
@@ -139,7 +143,8 @@ class ModelMetricsAnalyzer:
         # ログロス（ネイティブにはサポートされている）
         try:
             prob_result["log_loss"] = float(log_loss(y_true, y_pred_proba))
-        except:
+        except Exception:
+            logger.exception("ロス計算に失敗しました")
             prob_result["log_loss"] = None
 
         return prob_result

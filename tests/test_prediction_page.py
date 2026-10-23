@@ -2,11 +2,12 @@
 
 旧版はスクリプト形式で本番DBに依存していた。現在は一時DBのデモデータで検証する。
 
-既知の問題: リポジトリ同梱の data/prediction_model_advanced.pkl は旧
-scikit-learn で作成された GradientBoosting の pickle で、現行 scikit-learn
-（_loss モジュールの廃止）では読み込めない。そのため同梱モデルは
-「未訓練」と判定される。再学習して pkl を差し替えれば下の xfail は xpass
-になり、気づけるようになっている。
+同梱モデルについて: data/prediction_model_advanced.pkl は以前、旧
+scikit-learn の GradientBoosting pickle で現行環境では読み込めなかったが、
+Phase 2 で scripts/retrain_model.py により LightGBM で再学習し、
+現行環境で読み込める形式に差し替えた（test_saved_model_loads が担保）。
+ただし現行DBは着順が上位3着までしか無いため、再学習モデルは実質
+2クラス（1着 vs 2-3着）である点に注意。
 """
 
 import pytest
@@ -15,10 +16,6 @@ from app import prediction_model_lightgbm as pml
 from app import queries
 
 
-@pytest.mark.xfail(
-    reason="同梱pklが旧scikit-learn形式で現行環境では読み込めない（要再学習）",
-    strict=False,
-)
 def test_saved_model_loads():
     """同梱の学習済みモデル（data/*.pkl）が読み込めること"""
     model = pml.AdvancedRacePredictionModel()

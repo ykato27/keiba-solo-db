@@ -1,0 +1,11 @@
+{
+  "source": "JRA公式英語データサービス (https://jra.jp/JRAEN/AP/common/main) — JRA Race Card & Results",
+  "status": "取得はサーバー側の HTTP 403 により中止（2026-10-23）。再開は同一コマンドの再実行で可能（取り込み済みはスキップされる）",
+  "races": 2,
+  "entries": 34,
+  "payouts": 24,
+  "period": "2025-01-12 .. 2025-01-12",
+  "race_dates": [
+    "2025-01-12"
+  ]
+}

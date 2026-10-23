@@ -23,6 +23,7 @@ def select_bets(frame: pd.DataFrame, conditions: BettingConditions) -> pd.DataFr
     選定条件（すべて満たすもの）:
     - win_prob >= min_win_prob（低確率帯は推定誤差に弱いため除外）
     - win_prob * odds >= ev_threshold
+    - odds < max_odds（大穴回避。max_odds が None の場合は無制限）
     - 1レースあたり EV の高い順に max_bets_per_race 点まで
 
     Args:
@@ -46,6 +47,8 @@ def select_bets(frame: pd.DataFrame, conditions: BettingConditions) -> pd.DataFr
         (candidates["win_prob"] >= conditions.min_win_prob)
         & (candidates["ev"] >= conditions.ev_threshold)
     ]
+    if conditions.max_odds is not None:
+        candidates = candidates[candidates["odds"] < conditions.max_odds]
     if candidates.empty:
         return candidates
 
@@ -96,14 +99,24 @@ def bootstrap_roi_ci(
         return (float("nan"), float("nan"))
 
     rng = np.random.default_rng(conditions.bootstrap_seed)
-    race_ids = bets["race_id"].unique()
-    by_race = {rid: group for rid, group in bets.groupby("race_id")}
+    # 回収率は stake / return の合計だけで決まるため、レース単位に
+    # 事前集計してから再標本化する（行を concat し直す方式と統計的に
+    # 等価で、はるかに速い）。
+    grouped = bets.groupby("race_id")[["stake", "return_amount"]].sum()
+    stakes = grouped["stake"].to_numpy(dtype=float)
+    returns = grouped["return_amount"].to_numpy(dtype=float)
+    total_stake = stakes.sum()
+    if total_stake <= 0:
+        return (float("nan"), float("nan"))
 
     rois = []
     for _ in range(conditions.bootstrap_samples):
-        sampled = rng.choice(race_ids, size=len(race_ids), replace=True)
-        sample = pd.concat([by_race[rid] for rid in sampled], ignore_index=True)
-        rois.append(roi_percent(sample))
+        idx = rng.integers(0, len(grouped), size=len(grouped))
+        stake_sum = stakes[idx].sum()
+        if stake_sum > 0:
+            rois.append(returns[idx].sum() / stake_sum * 100)
+        else:
+            rois.append(float("nan"))
 
     low, high = np.nanpercentile(rois, [alpha / 2 * 100, (1 - alpha / 2) * 100])
     return (float(low), float(high))
